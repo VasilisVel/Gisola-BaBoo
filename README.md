@@ -88,3 +88,9 @@ GNU General Public License v3 (see `LICENSE`). Gisola-BaBoo is based on Gisola, 
 - Zahradník, J., Sokos, E., Turhan, F. (2026). ISOLA-BaBoo, a code for full moment tensor inversion with uncertainty estimation; application to the 2025 Anydros earthquakes. Seismica, 5(1). https://doi.org/10.26443/seismica.v5i1.2135
 
 - Triantafyllis, N., Venetis, I. E., Fountoulakis, I., Pikoulis, E.-V., Sokos, E., Evangelidis, C. P. (2021). Gisola: A High-Performance Computing Application for Real-Time Moment Tensor Inversion. Seismological Research Letters. https://doi.org/10.1785/0220210153
+
+## Acknowledgments
+
+This work is supported by TRANSFORM², which is funded by the European Union under project number 101188365 within the HORIZON-INFRA-2024-DEV-01-01 call.
+
+<p align="center"><img src="docs/transform2_logo.png" alt="TRANSFORM2 logo" width="220"></p>
