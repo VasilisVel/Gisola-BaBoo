@@ -1,0 +1,243 @@
+# Gisola-BaBoo configuration for the EIDA services of NOA (events, stations and waveforms).
+# Run it from the src folder, for example with an event file:
+#   python GisolaBaBoo.py --event-file ../test/greece2013_events.txt
+# (the same file works for -e, -d, --real-time and --revise; the offline benchmark
+# has its own file, ../test/config.yaml)
+
+# Directory where the results are written
+WorkDir: ../output/
+
+# CPU, or GPU if an NVIDIA GPU with CUDA is available (falls back to CPU otherwise)
+ComputeDevice: CPU
+MaxCores: null   # max. CPU cores to use (null = all cores this run is allowed to use;
+                 # set it e.g. on a shared server or in a container with a CPU quota)
+
+GraphSearch:
+  # Set to false to skip graph search entirely (runs before inversion).
+  Enabled: false
+
+Bootstrap:
+  Enabled: true
+  # number of bootstrap iterations (sets of station weights), default 100
+  Iterations: 100
+  # NBEST: top 2% of all (grid point, time shift) pairs per iteration
+  KeepFraction: 0.02
+  # Bootstrap centroid box: the grid points the bootstrap searches.
+  # The box restricts space only; the full time-shift range is always searched.
+  # Which box is used (the first that applies):
+  #   1. CentroidBox, if set and one of its rules matches the magnitude
+  #   2. CentroidBoxVR, if set
+  #   3. the full grid
+  # The rule used and the box limits are printed and written to inversion_parameters.dat.
+  #
+  # CentroidBoxVR: fraction of the best variance reduction VRmax, 0 < value <= 1.
+  #   The box is the bounding box (min..max in X, Y and Z) of all grid points whose
+  #   VR (best over the time shifts) is >= CentroidBoxVR x VRmax; every grid point
+  #   inside that box is used. Example: 0.8 with VRmax = 72.9% -> points with VR >= 58.3%.
+  #   Larger values give a smaller box; 1.0 keeps only the best point (only time varies).
+  #   null: not used.
+  CentroidBoxVR: 0.7
+  #
+  # CentroidBox: optional list of rules [Mmin, Mmax, Dx, Dy, Dz] (km): a box of
+  #   +/-Dx, +/-Dy, +/-Dz around the best centroid (shifted inside the grid at its
+  #   edges), for events with Mmin <= catalog magnitude <= Mmax. If set and a rule matches, it is
+  #   used instead of CentroidBoxVR; if no rule matches, CentroidBoxVR is used.
+  #   null: not used. To use the rules below, remove "null" and the "#" before them:
+  CentroidBox: null
+  #  - [0.0,  5.5,  6,  6, 8]
+  #  - [5.6,  6.5, 12, 12, 8]
+  #  - [6.6,  9.0, 15, 15, 8]
+
+
+# The Inventory Service supports FDSNWS-station only and file in XML format (as mentioned in ObsPy documentation)
+# The Inventory refers to the stations' characteristics such
+# as the poloes-zeros, digitizer's gain etc.
+Inventory:
+  # Reads inventory from the file. You are responsible to provide updated
+  # XML file for real-time processing (e.g. daily inventory update cron-job).
+  # If set to null or file is not found, most updated inventory will be
+  # retrieved from the FDSNWS hosts. However, more time will be consumed
+  # for retrieval
+  Service:
+   # - [StationXML, inventory.xml] # tokens are not used in inventory retrieval
+   # - [FDSNWS, http://localhost:8085, null]
+    - [FDSNWS, http://eida.gein.noa.gr, null]
+   # - [FDSNWS, http://webservices.ingv.it, null]
+   # - [FDSNWS, http://eida-service.koeri.boun.edu.tr, null]
+   # - [FDSNWS, http://eida-sc3.infp.ro, null]
+   # - [FDSNWS, http://eida-federator.ethz.ch, null]
+
+  WhiteList:
+    Filepath: ./stationsChr
+    Priority: 2   # priority of a station that is not in the station file
+    Rules:
+      - [3.0, 3.9, 2] # 0 value indicates blacklisted station in ./stations file
+      - [4.0, 4.5, 3]
+      - [4.6, 5.0, 3]
+      - [5.1, 5.8, 4]
+      - [5.9, 9.0, 5]
+
+  # Accepted types of components
+  Components: ['Z23', 'Z12', '123', 'ZNE']
+
+  # Retrieve channel types based on distance rules
+  # Distance rules has the form of: minMag, maxMag, minDist, maxDist, channels
+  Distance:
+    - [3.5, 4.0, [5, 150, ['BH','HH']]]
+    - [4.0, 5.0, [10, 250, ['BH','HH']]]
+    - [5.1, 5.5, [40, 300, ['BH','HH']]]
+    - [5.1, 5.5, [20,  100, ['HN','EN']]]
+    - [5.6, 6.0, [20, 450, ['BH','HH']]]
+    - [5.6, 6.0, [20, 150, ['HN','EN']]]
+    - [6.1, 9.0, [100, 700, ['BH','HH']]]
+  Azimuth: [3,2] # sectors, stations per sector # null for all!
+
+# The Stream Service supports FDSNWS-station only and file in XML format (as mentioned in ObsPy documentation)
+Stream:
+  # If you add more that one FDSNWS Hosts, results will be merged according to ObsPy's policy
+  # Service can have a value of: FDSNWS, SDS
+  # FDSNWS accepts multiple hosts but SDS only one
+  Service:
+     - [FDSNWS, http://eida.gein.noa.gr, null]
+    #- [SeedLink, 10.0.0.23:18000]
+    #- [SDS, /darrays/data]
+   # - [FDSNWS, http://localhost:8085, null]
+    # - [FDSNWS, http://webservices.ingv.it, null]
+    # - [FDSNWS, http://eida-service.koeri.boun.edu.tr, null]
+    # - [FDSNWS, http://eida-sc3.infp.ro, null]
+
+  # filter data by these modules
+  Modules: ['clip', 'mouse']
+
+  # Mouse-detection algorithm when 'mouse' is listed in Modules above.
+  #   1  —  Vackář (2015): 1-D search on synthetic waveforms (mouse2.py), the
+  #         original Gisola method. Default.
+  #   2  —  Zahradník (2026): 2-D grid search on integrated real records.
+  #         Fits both Mouse-I and Mouse-II simultaneously.
+  MouseAlgorithm: 1
+
+# Greens' Functions computation
+Green:
+
+  Grid:
+    - Rule: [4.0, 5.5] # mag condition
+      Distance:     # maxValue is NOT reached (+1 if you want to reach it)
+        - [0,9,2]   # minValue, maxValue, stepValue in km
+      Depth: # relevant to init depth
+        - [0,31,2]
+
+    - Rule: [5.6, 6.5]
+      Distance:
+        - [0,9,4]
+        - [15,21,5]
+      Depth:
+        - [0,31,2]
+
+    - Rule: [6.6, 9.0]
+      Distance:
+        - [0,31,5]
+      Depth:
+        - [0,31,2]
+
+  Crustal:
+
+    - Filepath: crustals/drakatos.vz
+      Geobox: (22.6163,37.6465), (23.3432,36.8208), (24.6418,36.6669), (25.6634,37.5202), (24.9950,38.6259), (23.6373,39.4235), (22.3654,39.2644), (21.8251,39.1394), (22.6163,37.6465)
+
+    - Filepath: crustals/hasslinger.vz
+      Geobox: (19.2844,39.7272), (19.3869,39.6062), (20.6181,36.2835), (21.0868,36.3442), (21.6460,36.3353), (22.4078,36.3616), (22.4193,36.8072), (22.3387,37.8602), (22.1245,38.5904), (21.5799,39.8288), (20.8563,41.2116), (19.2330,40.5713), (19.2844,39.7272)
+
+    - Filepath: crustals/karagianniN.vz
+      Geobox: (27.8207,37.7397), (27.7968,37.8825), (27.6912,39.8097), (26.7934,40.8404), (25.5053,41.0043), (23.8058,40.9247), (22.2572,40.3739), (22.7997,39.5096), (23.6678,38.8283), (24.5977,38.1499), (25.4623,37.5535), (27.8207,37.7397)
+
+    - Filepath: crustals/karagianniS.vz
+      Geobox: (23.0601,34.3852), (23.6039,34.0317), (26.8522,33.6953), (29.1178,34.7188), (29.9628,36.1148), (27.4820,37.5490), (26.4968,37.6732), (21.4060,37.0584), (23.0601,34.3852)
+    - Filepath: crustals/novotny.vz
+      Geobox: null # null indicates default: if none of the above crustal models match use this
+
+  ExePath: core/green/gr_xyz
+
+  MaxStations: 16      # max. stations used (azimuthal selection)
+  MaxSources: 1000     # max. source points per Green's-function file (one AXITRA run).
+                       # Larger runs repeat AXITRA's set-up less often (same Green's functions)
+  FreqMultiplier: 2.5  # AXITRA synthesis limit = FreqMultiplier x Fmax. 2.5 as old Gisola;
+                       # larger values cost time/memory with little effect, and nfreq is
+                       # capped at 513 (1024-sample window)
+  NyquistSamples: null     # alternative: nfreq = this fixed value (overrides FreqMultiplier)
+
+
+Inversion:
+
+  TimeShift:
+    - [4.0, 4.5, [-10, 1, 20]] # [Mmin, Mmax, [first, step, last]] shift in samples
+    - [4.6, 5.5, [-5, 1, 16]]
+    - [5.6, 9.0, [-5, 2, 43]]
+
+  Window:
+    - [4.0, 4.5, 204.8] # the lowest magnitude here is the minimum magnitude requested from the event server
+    - [4.6, 5.5, 307.2] # was 409.6
+    - [5.6, 7.1, 409.6]
+    - [7.2, 9.0, 1024]
+
+  Frequency:
+    - [4.0, 5.4, [0.04, 0.09]]
+    - [5.5, 5.9, [0.02, 0.07]]
+    - [6.0, 7.0, [0.01, 0.06]]
+    - [7.1, 9.0, [0.007, 0.03]]
+
+  # Source time function: delta (default) or triangle
+  # duration: triangle half-duration in seconds (ignored for delta)
+  STF:
+    type: delta
+    duration: 5.0
+
+  ExePath: core/inversion/isola
+
+  # ISOTROPIC = 1, DEVIATORIC = 2,
+  # Keyinv
+  # By default Keyinv is 2 (Deviatoric).
+  # list of geoboxes where Keyinv should be 1 (Isotropic).
+  # (lat,lon)
+  IsotropicGeoboxes: 
+    # Santorini, Amorgos
+    - (36.158758, 25.404119), (36.426637, 25.140630), (37.042126, 26.028408), (36.808750, 26.269440), (36.158758, 25.404119)
+
+# This service provides gisola with event info
+Event:
+  Host: http://eida.gein.noa.gr
+
+Notification:
+  Email:
+    Smtp: null # e.g. smtp.example.org:587; use null if not in use
+    User: user
+    Pass: pass
+    Sender: sender
+    Recipients: recipients
+    HostSite: http://localhost/gisola
+
+  Command: null # a command to run after each solution, e.g. "/path/to/script.sh $outputdir"
+
+# The Watcher Service monitors FDSNWS-event
+# for new events and triggers the auto MT procedure
+Watcher:
+  Magnitudetype: MLh # or null if not specifications is wanted
+  Range: 60 # check interval in sec
+  Playback: 0 # set sec for historic run
+  Historical: false # set playback option
+  Geobox: (20.3054,37.2037), (22.4079,33.6323), (27.0569,33.8793), (30.3113,35.8225), (27.4245,41.5998), (24.9779,42.0729), (21.7796,41.8349), (18.6751,40.6285), (20.3054,37.2037) # null indicates not bounds
+  Quality: # uncertainty
+    Time: 1
+    Depth: 10 # km
+    Latitude: 15
+    Longitude: 15
+    Magnitude: 0.3
+    Timeout: 120 # must get associated with the Time Range
+
+# Apply your citation for the results generation
+Citation:
+  Agency: National Observatory of Athens - Institute of Geodynamics
+  Website: http://bbnet.gein.noa.gr
+  Quality: B4 # choose threshold to view starting from A1 to D4
+  Logo: web/logo.png
+  Author: Gisola-BaBoo
+  Version: 1.0

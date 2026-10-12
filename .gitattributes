@@ -1,0 +1,9 @@
+# Files that are used on Linux must keep Unix line endings (LF), also when they are
+# committed from Windows: a CRLF breaks shell scripts, Makefiles and cron files.
+*.sh                          text eol=lf
+*.py                          text eol=lf
+Makefile*                     text eol=lf
+tools/crontab                 text eol=lf
+tools/scripts/crontab_example text eol=lf
+*.yaml                        text eol=lf
+*.yml                         text eol=lf

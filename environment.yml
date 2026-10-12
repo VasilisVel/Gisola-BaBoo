@@ -1,0 +1,60 @@
+name: GisolaBaBoo
+# Conda environment for Gisola-BaBoo (tested with Python 3.9 on Linux / WSL).
+#
+#   conda env create -f environment.yml
+#   conda activate GisolaBaBoo
+#
+# install.sh does all of this, and also installs conda (Miniforge), gfortran and make
+# when they are missing, compiles AXITRA (src/core/green) and pre-compiles the Numba kernels.
+#
+# Only the conda-forge channel is used (no Anaconda "defaults" channel).
+#
+# GPU support: if you have an NVIDIA GPU, install.sh checks it and, with your permission, installs the
+# CUDA libraries into this environment (see the manual). Without a GPU the program runs on the CPU.
+# Set ComputeDevice: GPU in the configuration file to use the GPU.
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  # Python and the packages that need compiled geographic libraries (maps of the result pages)
+  - python=3.9.2
+  - pip=21.0.1
+  - setuptools=49.6.0   # newer versions make obspy print a pkg_resources deprecation warning
+  - geos=3.8.1
+  - proj=7.2.0
+  - pyproj=3.0.0.post1
+  - basemap-data=1.3.2
+  - basemap-data-hires=1.3.2
+  - matplotlib-base=3.3.4
+  - jinja2=2.11.2
+  - markupsafe=1.1.1
+  - pip:
+    # numerical core, and the Numba kernels (CPU, and GPU when CUDA is available)
+    - numpy==1.25.2
+    - scipy==1.6.1
+    - pandas==1.2.2
+    - numba==0.60.0
+    - llvmlite==0.43.0
+    - threadpoolctl==3.6.0
+    # seismology and web services
+    - obspy==1.3.1
+    - lxml==4.6.2
+    - sqlalchemy==1.3.23
+    - decorator==4.4.2
+    - future==0.18.2
+    - pytz==2021.1
+    - requests==2.25.1
+    - chardet==4.0.0
+    - idna==2.10
+    - urllib3==1.26.3
+    - geographiclib==1.50
+    # configuration, geometry and plots
+    - pyyaml==5.4.1
+    - geojson==2.5.0
+    - shapely==1.7.1
+    - turfpy==0.0.5
+    - tqdm==4.57.0
+    - pillow==11.3.0
+    - basemap==1.3.8
+    # optional: fuzzy beachball and Hudson (source type) figures; they are skipped without it
+    - pyrocko==2025.1.21

@@ -1,0 +1,193 @@
+
+# Compute device: CPU or GPU (falls back to CPU if no CUDA GPU is found)
+ComputeDevice: CPU
+MaxCores: null   # max. CPU cores to use (null = all cores this run is allowed to use)
+
+GraphSearch:
+  # Set to false to skip graph search entirely (runs before inversion).
+  Enabled: false
+
+Bootstrap:
+  Enabled: true
+  # number of bootstrap iterations (sets of station weights), default 100
+  Iterations: 100
+  # NBEST: top 2% of all (grid point, time shift) pairs per iteration
+  KeepFraction: 0.02
+  # Bootstrap centroid box: the grid points the bootstrap searches.
+  # The box restricts space only; the full time-shift range is always searched.
+  # Which box is used (the first that applies):
+  #   1. CentroidBox, if set and one of its rules matches the magnitude
+  #   2. CentroidBoxVR, if set
+  #   3. the full grid
+  # The rule used and the box limits are printed and written to inversion_parameters.dat.
+  #
+  # CentroidBoxVR: fraction of the best variance reduction VRmax, 0 < value <= 1.
+  #   The box is the bounding box (min..max in X, Y and Z) of all grid points whose
+  #   VR (best over the time shifts) is >= CentroidBoxVR x VRmax; every grid point
+  #   inside that box is used. Example: 0.8 with VRmax = 72.9% -> points with VR >= 58.3%.
+  #   Larger values give a smaller box; 1.0 keeps only the best point (only time varies).
+  #   null: not used.
+  CentroidBoxVR: 0.7
+  #
+  # CentroidBox: optional list of rules [Mmin, Mmax, Dx, Dy, Dz] (km): a box of
+  #   +/-Dx, +/-Dy, +/-Dz around the best centroid (shifted inside the grid at its
+  #   edges), for events with Mmin <= catalog magnitude <= Mmax. If set and a rule matches, it is
+  #   used instead of CentroidBoxVR; if no rule matches, CentroidBoxVR is used.
+  #   null: not used. To use the rules below, remove "null" and the "#" before them:
+  CentroidBox: null
+  #  - [0.0,  5.5,  6,  6, 8]
+  #  - [5.6,  6.5, 12, 12, 8]
+  #  - [6.6,  9.0, 15, 15, 8]
+
+# Directory where the process is being performed
+WorkDir: ../test/results
+
+# The Inventory Service supports FDSNWS-station only and file in XML format (as mentioned in ObsPy documentation)
+Inventory:
+  # Reads inventory from the file. You are responsible to provide updated
+  # XML file for real-time processing (e.g. daily inventory update cron-job).
+  # If set to null or file is not found, most updated inventory will be
+  # retrieved from the FDSNWS hosts. However, more time will be consumed
+  # for retrieval
+  Service:
+    - [StationXML, ../test/benchmark/inventory.xml] # tokens are not used in inventory retrieval
+
+  WhiteList:
+    Filepath: null
+    Priority: 2  # default 2
+    Rules:
+      - [5.9, 9.0, 5]
+
+  # Accepted types of components
+  Components: ['Z23', 'Z12', '123', 'ZNE']
+
+  # Retrieve channel types based on distance rules
+  # Distance rules has the form of: minMag, maxMag, minDist, maxDist, channels
+  Distance:
+    - [6.1, 9.0, [100, 700, ['BH','HH']]]
+
+  Azimuth: [2,2] # sectors, stations per sector # null for all!
+
+# The Stream Service supports FDSNWS-station only and file in XML format (as mentioned in ObsPy documentation)
+Stream:
+  # If you add more that one FDSNWS Hosts, results will be merged according to ObsPy's policy
+  # Service can have a value of: FDSNWS, SDS
+  # FDSNWS accepts multiple hosts but SDS only one
+  Service:
+    - [SDS, ../test/benchmark/archive]
+
+  # filter data by these modules
+  Modules: ['clip', 'mouse']
+
+  # Mouse-detection algorithm when 'mouse' is listed in Modules above.
+  #   1  —  Vackář (2015): 1-D search on synthetic waveforms (mouse2.py), the
+  #         original Gisola method. Default.
+  #   2  —  Zahradník (2026): 2-D grid search on integrated real records.
+  #         Fits both Mouse-I and Mouse-II simultaneously.
+  MouseAlgorithm: 1
+
+# Greens' Functions computation
+Green:
+
+  Grid:
+    - Rule: [4.0, 5.5]
+      Distance:
+        - [0,9,2]
+      Depth:
+        - [0,31,2]
+
+    - Rule: [5.6, 6.5]
+      Distance:
+        - [0,9,4]
+        - [15,21,5]
+      Depth:
+        - [0,31,2]
+
+    - Rule: [6.6, 9.0]
+      Distance:
+        - [0,31,5]
+      Depth:
+        - [0,31,2]
+
+  Crustal:
+    - Filepath: crustals/novotny.vz
+      Geobox: null # null indicates default: if none of the above crustal models match use this
+
+  ExePath: core/green/gr_xyz
+
+  MaxStations: 16 # must be the same with the one in parameters.f90
+  MaxSources: 1000     # max. source points per Green's-function file (one AXITRA run).
+                       # Larger runs repeat AXITRA's set-up less often (same Green's functions)
+  FreqMultiplier: 2.5  # Axitra synthesis limit = FreqMultiplier x Fmax # must be the same with the one in parameters.f90
+  NyquistSamples: null     # alternative: nfreq = this fixed value (overrides FreqMultiplier)
+
+
+Inversion:
+  # InversionWindow = 409.6,
+  # dt = 409.6/1024 = 0.4 sec
+  # TimeShift: -10*0.4 = -4 ---- 43*0.4 = +17.2sec
+  # Step: 0.4 * 2 = 0.8
+  TimeShift:
+    - [5.6, 9.0, [-10, 2, 43]]
+
+  Window:
+    - [5.6, 9.0, 409.6]
+
+  Frequency:
+    - [6.1, 9.0, [0.007, 0.03]]
+
+  # Source time function: delta (default) or triangle
+  # duration: triangle half-duration in seconds (ignored for delta)
+  STF:
+    type: delta
+    duration: 5.0
+
+  ExePath: core/inversion/isola
+
+  # By default Keyinv is 2 (Deviatoric).
+  # Events inside IsotropicGeoboxes are solved as Keyinv=1 (Isotropic).
+  IsotropicGeoboxes:
+    # Santorini, Amorgos
+    - (36.158758, 25.404119), (36.426637, 25.140630), (37.042126, 26.028408), (36.808750, 26.269440), (36.158758, 25.404119)
+
+# This service provides gisola with event info
+Event:
+  Host: null
+
+Notification:
+  Email:
+    Smtp: null # e.g. smtp.example.org:587; use null if not in use
+    User: user
+    Pass: pass
+    Sender: sender
+    Recipients: recipients
+    HostSite: http://localhost/gisola
+
+  Command: null # invoke bash command when processing is finished.
+                # Use keyword $bestinvdir in your script. Gisola will
+                # reserve this keyword to indicate the full path
+                # of the best inversion directory
+
+# The Watcher Service monitors FDSNWS-event
+# for new events and triggers the auto MT procedure
+Watcher:
+  Magnitudetype: MLh # or null if not specifications is wanted
+  Range: 240 # check interval in sec
+  Playback: 0 # set sec for historic run
+  Historical: false # set playback option
+  Geobox: null # indicates not bounds
+  Quality: # uncertainty
+    Time: 1
+    Depth: 10 # km
+    Latitude: 15
+    Longitude: 15
+    Magnitude: 0.3
+    Timeout: 120 # must get associated with the Time Range
+
+Citation:
+  Agency: Test
+  Website: http://localhost
+  Quality: B4
+  Logo: web/logo.png
+  Author: Gisola-BaBoo
+  Version: 1.0

@@ -1,0 +1,27 @@
+# Files that are made on your computer by the installation and by the runs.
+# They are rebuilt by install.sh and by the program, so they are not part of the repository.
+
+# AXITRA build files (install.sh compiles them)
+src/core/green/*.o
+src/core/green/*.mod
+src/core/green/gr_xyz
+
+# Python and Numba caches (precompile.py fills them)
+__pycache__/
+*.pyc
+*.nbi
+*.nbc
+
+# Results and logs of the runs
+output/
+test/results/
+src/log
+log
+*.log
+
+# Editors and systems (Word keeps a lock file ~$name.docx while a document is open)
+~$*
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
