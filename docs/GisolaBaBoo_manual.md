@@ -24,12 +24,10 @@ Gisola-BaBoo runs on Linux, or on Windows through WSL. It needs conda (for Pytho
 ### Automatic installation
 
 ```
-git clone https://github.com/VasilisVel/Gisola-BaBoo.git
-cd Gisola-BaBoo
+git clone https://github.com/VasilisVel/Gisola-BaBoo.git ~/Gisola-BaBoo
+cd ~/Gisola-BaBoo
 bash install.sh
 ```
-
-The code is cloned into the current folder, in a new folder `Gisola-BaBoo`; the commands in this chapter start from the folder where you cloned it.
 
 The script checks what is missing and asks before it downloads anything (the default answer is no; `--yes` answers yes to all, `--no-gpu` skips the GPU check). It does these steps:
 
@@ -48,7 +46,7 @@ Open a new terminal afterwards.
 ```
 curl -L -O https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-$(uname -m).sh
 bash Miniforge3-Linux-$(uname -m).sh            # conda; then open a new terminal
-cd Gisola-BaBoo
+cd ~/Gisola-BaBoo
 conda env create -f environment.yml
 conda activate GisolaBaBoo
 conda install -c conda-forge --override-channels gfortran make    # if missing
@@ -62,7 +60,7 @@ Two examples (the calls are analyzed in Usage):
 
 ```
 conda activate GisolaBaBoo
-cd Gisola-BaBoo/src
+cd ~/Gisola-BaBoo/src
 
 # 1. Local run of the benchmark event: it uses local data, so it runs with a different configuration.
 python GisolaBaBoo.py -c ../test/config.yaml --event-xml ../test/benchmark/event.xml

@@ -20,11 +20,9 @@ Linux (or WSL on Windows). No administrator rights are needed.
 Get Gisola-BaBoo from GitHub:
 
 ```bash
-git clone https://github.com/VasilisVel/Gisola-BaBoo.git
-cd Gisola-BaBoo
+git clone https://github.com/VasilisVel/Gisola-BaBoo.git ~/Gisola-BaBoo
+cd ~/Gisola-BaBoo
 ```
-
-The code is cloned into the current folder, in a new folder `Gisola-BaBoo`; the commands below start from the folder where you cloned it.
 
 ### Automatic installation
 
@@ -45,7 +43,7 @@ You can also do the steps yourself:
    ```
 2. **The environment** (in the main folder):
    ```bash
-   cd Gisola-BaBoo
+   cd ~/Gisola-BaBoo
    conda env create -f environment.yml
    conda activate GisolaBaBoo
    ```
@@ -70,7 +68,7 @@ Two examples, to run from the `src` folder:
 
 ```bash
 conda activate GisolaBaBoo
-cd Gisola-BaBoo/src
+cd ~/Gisola-BaBoo/src
 
 # 1. Local run of the benchmark event: it uses local data, so it runs with a different configuration (see the manual).
 python GisolaBaBoo.py -c ../test/config.yaml --event-xml ../test/benchmark/event.xml
