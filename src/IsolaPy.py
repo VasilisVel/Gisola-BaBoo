@@ -1963,7 +1963,7 @@ def _hammer_xy(gamma_deg, delta_deg):
 def _lune_plot(M_all, VR, median_M, best_M, outpath):
     """Lune source-type plot (Tape & Tape 2012) of the whole bootstrap
     ensemble, Hammer equal-area projection, members coloured by VR."""
-    fig, ax = plt.subplots(figsize=(5.5, 9))
+    fig, ax = plt.subplots(figsize=(5.5, 8))
 
     # graticule: meridians every 10 deg (boundary at +/-30), parallels every 15 deg
     dd = np.linspace(-90, 90, 361)
@@ -2018,9 +2018,9 @@ def _lune_plot(M_all, VR, median_M, best_M, outpath):
     ax.set_aspect('equal')
     ax.set_axis_off()
     ax.set_title('Lune source-type plot (Tape & Tape 2012)\n'
-                 'Bootstrap ensemble, N = %d' % len(VR), fontweight='bold')
+                 'Bootstrap ensemble, N = %d' % len(VR), fontsize=17, fontweight='bold')
     fig.tight_layout()
-    fig.savefig(outpath, dpi=150)
+    fig.savefig(outpath, dpi=150, bbox_inches='tight', pad_inches=0.15)
     plt.close(fig)
 
 
@@ -2115,9 +2115,10 @@ def _hudson_cloud_plot(u_vals, v_vals, VR_plot, center_mt, label, outpath):
     cbar.set_label('Variance Reduction (%)', rotation=270, labelpad=15)
 
     ax.set_aspect('equal')
-    ax.set_title("Hudson Plot: Bootstrap Cloud with " + label)
+    ax.set_title("Hudson Plot: Bootstrap Cloud with " + label,
+                 fontsize=17, fontweight='bold')
     fig.tight_layout()
-    fig.savefig(outpath, dpi=150)
+    fig.savefig(outpath, dpi=150, bbox_inches='tight', pad_inches=0.15)
     plt.close(fig)
 
 
@@ -2407,19 +2408,20 @@ def getBootstrapping(num_iterations=None, num_realizations=None):
             ax.scatter([cmt_xy[0]], [cmt_xy[1]], marker='*', s=280, color='lime',
                        edgecolors='black', linewidths=1.0, zorder=5,
                        label='Best solution (CMT)')
-            ax.set_xlabel(xl)
-            ax.set_ylabel(yl)
+            ax.set_xlabel(xl, fontsize=12)
+            ax.set_ylabel(yl, fontsize=12)
             if flip:
                 ax.invert_yaxis()
         cbar = fig.colorbar(sc, ax=axes, fraction=0.02, pad=0.02)
         cbar.set_label('Variance Reduction (%)')
 
-        fig.suptitle(
-            'Source grid coloured by Variance Reduction  —  '
-            'Total: {n} pts  |  Bootstrap subset: {m} pts ({p:.1f}%)  |  {r}'.format(
-                n=n_total, m=n_boot, p=pct_boot,
-                r=_centroid_box_lines(_box_info)[0].replace('Rule: ', '')),
-            fontsize=13, fontweight='bold', y=0.98)
+        fig.suptitle('Source grid coloured by Variance Reduction',
+                     fontsize=18, fontweight='bold', y=1.12)
+        fig.text(0.5, 1.015,
+                 'Total: {n} pts  |  Bootstrap subset: {m} pts ({p:.1f}%)  |  {r}'.format(
+                     n=n_total, m=n_boot, p=pct_boot,
+                     r=_centroid_box_lines(_box_info)[0].replace('Rule: ', '')),
+                 ha='center', va='bottom', fontsize=13)
         # legend below the three panels, so it never covers grid points
         _h, _l = axes[0].get_legend_handles_labels()
         fig.legend(_h, _l, loc='lower center', ncol=3, fontsize=10, framealpha=0.9,
@@ -2744,14 +2746,14 @@ def _hist_row(plotdir, data2d, bests, titles, suptitle, fname,
                        linewidth=1.8, label='Median MT')
         ax.axvline(bests[data_i], color='black', linestyle='--',
                    linewidth=1.8, label='Best')
-        ax.set_title(titles[plot_i], fontsize=11, fontweight='bold')
+        ax.set_title(titles[plot_i], fontsize=13, fontweight='bold')
         ax.set_xlabel('Value', fontsize=10)
         ax.grid(axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         ax.legend(fontsize=9, framealpha=0.85)
     axes[0].set_ylabel('Frequency', fontsize=10)
-    fig.suptitle(suptitle, fontsize=14, fontweight='bold')
+    fig.suptitle(suptitle, fontsize=17, fontweight='bold')
     fig.tight_layout()
     fig.savefig(os.path.join(plotdir, _rv(fname)), dpi=150)
     plt.close(fig)
@@ -2839,7 +2841,7 @@ def _fig_centroid_time():
                    label='Best  %.2f' % CMT_BEST[i])
         ax.set_xlim(low_lim, high_lim)
         ax.set_ylim(0, 1.45 * counts.max())      # headroom: legend above the bars
-        ax.set_title(titles[i], fontsize=11, fontweight='bold')
+        ax.set_title(titles[i], fontsize=13, fontweight='bold')
         ax.set_xlabel('Value', fontsize=10)
         ax.set_ylabel('Count', fontsize=10)
         ax.yaxis.set_tick_params(labelleft=True)
@@ -2848,7 +2850,7 @@ def _fig_centroid_time():
         ax.spines['right'].set_visible(False)
         ax.legend(fontsize=9.5, loc='upper right', framealpha=0.85)
     fig.suptitle('Bootstrap Time and Centroid Uncertainty (histograms of the whole ensemble)',
-                 fontsize=14, fontweight='bold')
+                 fontsize=17, fontweight='bold')
     fig.tight_layout()
     fig.savefig(os.path.join(c['plotdir'], _rv('hist_centroid_time.png')), dpi=150)
     plt.close(fig)
@@ -2866,7 +2868,7 @@ def _fig_iso():
     ax.set_xlabel('ISO (%)', fontsize=11)
     ax.set_ylabel('Count', fontsize=11)
     ax.legend(fontsize=10, framealpha=0.85)
-    ax.set_title('Moment Tensor Decomposition: ISO Component', fontweight='bold')
+    ax.set_title('Moment Tensor Decomposition: ISO Component', fontsize=16, fontweight='bold')
     ax.grid(axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -2909,21 +2911,21 @@ def _tradeoff_plot(c, col, nd_label, fname):
                       s=12, alpha=0.7, edgecolors='none')
     ax1.set_xlabel(nd_label, fontsize=11)
     ax1.set_ylabel('Variance Reduction (%)', fontsize=11)
-    ax1.set_title('VR vs %s, colour = depth' % nd_label.split()[0], fontweight='bold')
+    ax1.set_title('VR vs %s, colour = depth' % nd_label.split()[0], fontsize=14, fontweight='bold')
     fig.colorbar(sc1, ax=ax1).set_label('Depth Z (km)')
     sc2 = ax2.scatter(nd[order], depth[order], c=vr[order], cmap='viridis',
                       s=12, alpha=0.7, edgecolors='none')
     ax2.invert_yaxis()
     ax2.set_xlabel(nd_label, fontsize=11)
     ax2.set_ylabel('Depth Z (km)', fontsize=11)
-    ax2.set_title('Depth vs %s, colour = VR' % nd_label.split()[0], fontweight='bold')
+    ax2.set_title('Depth vs %s, colour = VR' % nd_label.split()[0], fontsize=14, fontweight='bold')
     fig.colorbar(sc2, ax=ax2).set_label('Variance Reduction (%)')
     for ax in (ax1, ax2):
         ax.grid(linestyle='--', linewidth=0.5, alpha=0.5)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
     fig.suptitle('Bootstrap ensemble: source type vs fit and depth (N = %d)' % len(vr),
-                 fontsize=13, fontweight='bold')
+                 fontsize=17, fontweight='bold')
     fig.tight_layout()
     fig.savefig(os.path.join(c['plotdir'], _rv(fname)), dpi=150)
     plt.close(fig)
@@ -2969,12 +2971,13 @@ def _fig_fuzzy():
                               extra_mts=[(med_norm, 'limegreen')])
     ax.set_xlim(-150, 150); ax.set_ylim(-150., 150)
     ax.set_aspect('equal'); ax.set_axis_off()
-    plt.title("Moment Tensor Uncertainty (Bootstrap Ensemble, N=%d)"
-              % all_mats.shape[0], fontweight='bold')
+    plt.title("Moment Tensor Uncertainty\nBootstrap Ensemble, N = %d"
+              % all_mats.shape[0], fontsize=16, fontweight='bold')
     ax.legend(handles=[Line2D([0], [0], color='red', lw=2, label='Best Solution'),
                        Line2D([0], [0], color='limegreen', lw=2, label='Median Solution')],
               loc='upper right', bbox_to_anchor=(1.1, 0.95))
-    fig.savefig(os.path.join(c['plotdir'], _rv('beachball_fuzzy.png')), dpi=150)
+    fig.savefig(os.path.join(c['plotdir'], _rv('beachball_fuzzy.png')), dpi=150,
+                bbox_inches='tight', pad_inches=0.15)
     plt.close(fig)
 
 
@@ -3758,7 +3761,7 @@ def _renderBootstrapPage(plotdir, st, result):
     BLUE = '#3AAEE0'
 
     # ---- style helpers that mirror the event-page look ----
-    def title(text):
+    def title(text, size=20):
         # thin grey rule + centred bold h2, exactly like the template panels
         return (
             '<table role="presentation" cellpadding="0" cellspacing="0" width="100%" '
@@ -3770,8 +3773,8 @@ def _renderBootstrapPage(plotdir, st, result):
             '<td style="font-size:0px;line-height:0px">&#160;</td></tr></tbody>'
             '</table></td></tr></tbody></table>'
             '<h2 style="margin:0;color:#000;line-height:140%;text-align:center;'
-            'word-wrap:break-word;font-weight:normal;font-family:{f};font-size:20px">'
-            '<strong>{t}</strong></h2>').format(f=FONT, t=text)
+            'word-wrap:break-word;font-weight:normal;font-family:{f};font-size:{s}px">'
+            '<strong>{t}</strong></h2>').format(f=FONT, t=text, s=size)
 
     def img(f, css):
         f = _rv(f)
@@ -3790,12 +3793,12 @@ def _renderBootstrapPage(plotdir, st, result):
     p1, p2 = st['p1_med'], st['p2_med']
 
     mt_stats = (
-        kv('NP1 strike/dip/rake (median MT)',
+        kv('NP1 strike/dip/rake',
            '{:.0f} / {:.0f} / {:.0f}'.format(p1[0], p1[1], p1[2]))
-        + kv('NP2 strike/dip/rake (median MT)',
+        + kv('NP2 strike/dip/rake',
              '{:.0f} / {:.0f} / {:.0f}'.format(p2[0], p2[1], p2[2]))
-        + kv('Mw (median MT)', '{:.2f}'.format(st['Mw_mt']))
-        + kv('Mo (median MT, Nm)', '{:.3e}'.format(st['Mo_mt']))
+        + kv('Mw', '{:.2f}'.format(st['Mw_mt']))
+        + kv('Mo (Nm)', '{:.3e}'.format(st['Mo_mt']))
         + kv('Ensemble members',
              '{} (from {} resamplings)'.format(st['n_solutions'], st['n_iterations']))
         + kv('VR range (%)', '{:.1f} &ndash; {:.1f}'.format(st['vr_min'], st['vr_max'])))
@@ -3853,8 +3856,9 @@ def _renderBootstrapPage(plotdir, st, result):
     # ---- section 3: Uncertainty Visualization ----
     # source type (Hudson, trade-off with depth and VR, decomposition / ISO
     # histograms) followed by magnitudes and the grid VR overview
-    def _cell(f, basis, maxw):
-        im = img(f, 'width:100%;max-width:{}px;height:auto'.format(maxw))
+    def _cell(f, basis, maxw, h=None):
+        im = img(f, ('height:{}px;width:auto;max-width:100%'.format(h) if h
+                     else 'width:100%;max-width:{}px;height:auto'.format(maxw)))
         if not im:                      # figure not made (e.g. ISO for deviatoric)
             return ''
         return ('<div style="flex:1 1 {b}px;min-width:300px;text-align:center">'
@@ -3863,8 +3867,8 @@ def _renderBootstrapPage(plotdir, st, result):
     unc = (
         '<div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;'
         'align-items:flex-start;max-width:1300px;margin:6px auto">'
-        + _cell('hudson_median.png', 380, 440)
-        + _cell('lune_median.png', 300, 330)
+        + _cell('hudson_median.png', 380, 440, 480)
+        + _cell('lune_median.png', 300, 330, 480)
         + _cell('tradeoff_depth_vr.png', 600, 880)
         + _cell('tradeoff_depth_vr_iso.png', 600, 880)      # below it, same size (full MT)
         + _cell('hist_iso.png', 380, 440)
@@ -3872,31 +3876,18 @@ def _renderBootstrapPage(plotdir, st, result):
 
     # ---- section 4: Bootstrap Box - source grid, bootstrap subset, best
     #      solution; full page width ----
-    box_txt = ('<p style="text-align:center;font-size:14px;line-height:140%;margin:6px 0;'
-               'color:#333;font-family:' + FONT + '">Grid points searched in every '
-               'bootstrap iteration (red circles) within the full source grid, '
-               'coloured by variance reduction of the original data.</p>')
     box = ('<div style="text-align:center;margin:6px 0">'
            + img('grid_vr_bootstrap.png', 'width:100%;height:auto')
            + '</div>')
 
-    intro = ('<p style="text-align:center;font-size:14px;line-height:140%;margin:8px 0;'
-             'color:#333;font-family:' + FONT + '">'
-             + '{n} ensemble members from {it} bootstrap resamplings '
-               '(VR {vmin:.1f}&ndash;{vr:.1f}%). Statistics: median, '
-               '68% and 95% confidence intervals.'.format(
-                   n=st['n_solutions'], it=st['n_iterations'],
-                   vmin=st['vr_min'], vr=st['vr_max'])
-             + '</p>')
-
     section = (
         '<div id="bootstrap-results" style="max-width:900px;margin:0 auto;'
         'padding:10px 20px 20px;background:#ffffff;font-family:' + FONT + '">'
-        + title('Bootstrap Uncertainty Analysis') + intro
-        + title('Moment Tensor Statistics') + mt_panel
+        + title('Statistical Uncertainty Analysis', 24)
+        + title('Median Moment Tensor') + mt_panel
         + title('Ensemble Statistics') + loc_table + loc_plot
         + title('Uncertainty Visualization') + unc
-        + title('Bootstrap Box') + box_txt + box
+        + title('Bootstrap Box') + box
         + '</div>')
 
     # Insert right after the last content section and BEFORE the Gisola logo
