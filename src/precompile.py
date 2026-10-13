@@ -33,6 +33,7 @@ try:
 except Exception:
     pass
 
+warnings.filterwarnings('ignore', category=FutureWarning)       # numba-cuda: Python 3.9 notice
 import IsolaPy as isola
 
 rng       = np.random.default_rng(0)

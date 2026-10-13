@@ -28,6 +28,24 @@ import re
 # local lib
 import event
 
+import hashlib
+import numpy as np
+
+# RandomSeed of the configuration file (set by the main program): None = the random numbers differ
+# from run to run (default); a whole number makes the runs repeatable
+random_seed = None
+
+def rng(*parts):
+    """Random number generator of the clipping check and of the bootstrap. Returns None when RandomSeed
+    is not set (the callers then use numpy's global random numbers, as always). With a seed it returns a
+    generator that gives the same numbers on every run; parts (the origin time of the event, the id
+    of a trace...) make each use independent of the others, so the result of an event does not depend on
+    the other events of the run or on the order of the processes."""
+    if random_seed is None:
+        return None
+    key = '|'.join(str(p) for p in (random_seed,) + parts).encode('utf-8')
+    return np.random.default_rng(int.from_bytes(hashlib.sha256(key).digest()[:8], 'big'))
+
 def n_cores(_cfg=None):
     """Cores this program may use: the CPUs it is allowed to run on
     (os.sched_getaffinity - respects taskset, cpusets and job schedulers),

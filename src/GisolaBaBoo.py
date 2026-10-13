@@ -25,6 +25,10 @@
 import os as _os
 _os.environ.setdefault('OMP_WAIT_POLICY', 'PASSIVE')
 
+# before the imports: numba-cuda (GPU) prints a FutureWarning about Python 3.9 when it is imported
+import warnings
+warnings.filterwarnings('ignore')
+
 import datetime, sys, argparse, yaml, logging
 from obspy.clients.fdsn.client import Client
 from obspy import Catalog, Stream, read_events, read
@@ -133,6 +137,18 @@ if args.revise:
 
 _cfg=config.read(args.config)
 _rev_cfg = config.read(args.revise_config) if args.revise_config else None
+
+# ---- RandomSeed: null (default) = the random numbers differ from run to run; a whole number makes
+# the runs repeatable (clipping check, Bayesian bootstrap). A revision configuration may set its own.
+_seed = _rev_cfg['RandomSeed'] if _rev_cfg and 'RandomSeed' in _rev_cfg else _cfg.get('RandomSeed')
+if _seed is None:
+    config.random_seed = None
+else:
+    try:
+        config.random_seed = int(_seed)
+    except (TypeError, ValueError):
+        sys.exit('ERROR: RandomSeed must be a whole number or null, not {!r}'.format(_seed))
+    print('[INFO] Random seed    : {}'.format(config.random_seed), flush=True)
 
 # ---- cores: the CPUs this run may use (allowed CPUs, capped by MaxCores) -------
 # Numba's parallel loops and the BLAS/LAPACK threads use them; the process/thread

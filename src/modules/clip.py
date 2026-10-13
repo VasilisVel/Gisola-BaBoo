@@ -62,7 +62,13 @@ def clipAutoDetect(trace, threshold = 0.9, sigma = 0.0001):
    """
 
    #Create uniformly distributed random numbers array
-   r = (np.random.uniform(low = 0.0, high = 1.0, size = trace.data.shape) - 0.5) * sigma * max(trace.data)
+   #(with RandomSeed in the configuration the numbers are the same on every run, and different for every trace)
+   _rng = config.rng(trace.id, trace.stats.starttime)
+   if _rng is not None:
+      _u = _rng.uniform(low = 0.0, high = 1.0, size = trace.data.shape)
+   else:
+      _u = np.random.uniform(low = 0.0, high = 1.0, size = trace.data.shape)
+   r = (_u - 0.5) * sigma * max(trace.data)
 
    #Add the r signal to the Trace data (avoid the failure for exactly equal or locally rebounding waveform around the peak amplitudes)
    trace.data = trace.data + r

@@ -69,28 +69,27 @@ python GisolaBaBoo.py -c ../test/config.yaml --event-xml ../test/benchmark/event
 python GisolaBaBoo.py --event-file ../test/greece2013_events.txt
 ```
 
-The first call needs no network, and takes about 2 minutes (Mw 7.0, variance reduction about 79 %). The second call downloads 10 events, and takes 5 to 15 minutes. The results go to `test/results/` and `output/`.
+The first call needs no network, and takes about 1 minute (Mw 7.0, variance reduction 79.6 %). The test configuration has a fixed seed (`RandomSeed: 42`), so the benchmark gives the same results on every run. The second call downloads 10 events, and takes 5 to 15 minutes. The results go to `test/results/` and `output/`.
 
 ### GPU support (if you have an NVIDIA GPU)
 
 Gisola-BaBoo can run on an NVIDIA GPU (`ComputeDevice: GPU` in the configuration file). By default it uses the CPU, and then nothing in this section is needed. The GPU code was tested on one GPU, the CPU is often as fast on consumer GPUs, and AMD and Intel GPUs are not supported.
 
-**What the installer does.** If the computer has an NVIDIA GPU, `install.sh` tests it with a small program (`check_gpu.py`). If the test fails because the CUDA libraries are missing, the installer asks your permission and tries to install them into the environment. At the end it prints `GPU: ready`, or the reason why the GPU cannot be used. The NVIDIA driver is part of the operating system, so the installer never installs it.
+**What the installer does.** If the computer has an NVIDIA GPU, `install.sh` tests it with a small program (`check_gpu.py`). If the test fails (the CUDA libraries are missing, or the driver is newer than the Numba version supports), the installer asks your permission and installs `numba-cuda`, the NVIDIA package that brings the CUDA libraries, into the environment (about 600 MB). It uses the variant for CUDA 12 or for CUDA 13, as your driver supports. At the end it prints `GPU: ready`, or the reason why the GPU cannot be used; then the program runs on the CPU. The NVIDIA driver is part of the operating system, so the installer never installs it.
 
-**If the automatic set-up failed, set up the GPU yourself.** The CUDA libraries have to fit your GPU and your driver, and the installer can choose them only when this is clear. By hand:
+**If the automatic set-up failed, set up the GPU yourself.** The libraries have to fit your GPU and your driver. By hand:
 
 1. **The driver.** Run `nvidia-smi`. It shows the driver and the highest CUDA version that the driver supports (`CUDA Version`). If the command is not found, there is no NVIDIA driver: install it first (in WSL, the driver is installed on Windows).
 2. **The GPU.** Run `nvidia-smi --query-gpu=name,compute_cap --format=csv`. It shows the name and the generation of your GPU. A newer GPU needs a newer CUDA version. NVIDIA's documentation (https://developer.nvidia.com/cuda-gpus) shows what your GPU needs.
-3. **The libraries.** Install a CUDA version that is new enough for your GPU and not newer than the driver supports (`X.Y` in the command is that version):
+3. **The libraries.** Install numba-cuda, the NVIDIA package that brings the CUDA libraries, in the variant of your driver: `cu12` for a driver that supports CUDA 12.x, `cu13` for CUDA 13.x. The first command updates `pip`, which is too old for numba-cuda:
 
 ```
-conda install -n GisolaBaBoo -c conda-forge --override-channels "cuda-version=X.Y" cuda-cudart cuda-nvvm-impl cuda-nvvm-tools
+python -m pip install -U "pip<25"
+python -m pip install "numba-cuda[cu12]==0.20.1"
 ```
-
-You can also follow NVIDIA's instructions for your system (https://developer.nvidia.com/cuda-downloads).
 
 4. **The check.** Run `python check_gpu.py` in the `src` folder. It runs a small kernel on the GPU, and prints `GPU works`, or the reason why it does not.
-5. **Switch it on.** Set `ComputeDevice: GPU` in the configuration file, and run `python precompile.py` again.
+5. **Switch it on.** Set `ComputeDevice: GPU` in the configuration file. In the `src` folder delete `__pycache__` and `modules/__pycache__` (kernels saved before cannot be read by numba-cuda), and run `python precompile.py` again.
 
 ### Pre-compiled kernels
 
@@ -616,6 +615,7 @@ Everything that happens in a run is recorded in its log file, output/log in the 
 ```yaml
 ComputeDevice: CPU          # CPU or GPU (falls back to CPU)
 MaxCores: null              # null = all available cores
+RandomSeed: null            # null = random; a whole number = repeatable results
 GraphSearch:
   Enabled: true             # fast centroid search (in development)
 Notification:
@@ -641,6 +641,7 @@ Citation:
 |---|---|
 | ComputeDevice | CPU or GPU (default CPU). With GPU, if no CUDA device is found (or the CUDA libraries cannot be loaded), a message is printed and the run continues on the CPU. |
 | MaxCores | the maximum number of CPU cores used by all parallel steps; null uses every available core. |
+| RandomSeed | null (default): the random numbers of the clipping check and of the bootstrap differ from run to run, so the result of a borderline event changes slightly (the benchmark gives a variance reduction between 78 and 80 %). A whole number (e.g. 42): the same results on every run on the same computer, also for an event alone or in a list of events. Use it for tests and to compare the CPU with the GPU; the test configuration of the benchmark (`test/config.yaml`) sets 42. |
 | GraphSearch | a fast centroid search method (in development). |
 | Notification.Email | an e-mail is sent after each solution (normal run and revise) when Smtp is set; a failure gives a warning and the run continues. |
 | Notification.Command | a command of your own, run after each solution, for example to send the solution to SeisComP, copy the results to a server or start an alert. $outputdir is replaced by the output folder of the run, and $bestinvdir by the name of the best combination. A failure gives a warning and the run continues. |

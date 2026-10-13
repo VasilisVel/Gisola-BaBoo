@@ -567,7 +567,7 @@ def calculateVariance(observed, synthetic, tl):
 def _green_chunk_size():
     """Sources per AXITRA run: Green.MaxSources, capped so that the spectra of one
     run (nfreq x 18 x stations x sources complex values, 16 bytes each) stay within
-    Green.RunMemoryMB (default 500 MB). The chunk size does not change the Green's
+    Green.RunMemoryMB (default 3000 MB; not in the configuration file). The chunk size does not change the Green's
     functions - every source is computed on its own (checked bit-identical for
     100, 200 and 400 sources per run) - only how often AXITRA repeats its set-up."""
     green = config.cfg['Green']
@@ -578,7 +578,7 @@ def _green_chunk_size():
                  for tl in config.windowRules])
     nfreq = min(nfreq, NUM_OF_TIME_SAMPLES // 2 + 1)
     n_sta = int(green.get('MaxStations') or 16)
-    budget = float(green.get('RunMemoryMB') or 500) * 1e6
+    budget = float(green.get('RunMemoryMB') or 3000) * 1e6
     cap = max(1, int(budget // (nfreq * 18 * n_sta * 16)))
     return max(1, min(n_max, cap))
 
@@ -2223,8 +2223,11 @@ def getBootstrapping(num_iterations=None, num_realizations=None):
     # =========================================================
     # at least one weight set per iteration (CPU and GPU both use the first
     # num_iterations rows)
-    dirichlet_samples = np.random.dirichlet(alpha=[1] * len(ChannelsUsed),
-                                            size=max(num_realizations, num_iterations))
+    # (with RandomSeed in the configuration the weights are the same on every run of this event)
+    _rng = config.rng('bootstrap', config.org.time)
+    _dirichlet = _rng.dirichlet if _rng is not None else np.random.dirichlet
+    dirichlet_samples = _dirichlet(alpha=[1] * len(ChannelsUsed),
+                                   size=max(num_realizations, num_iterations))
     # station-level weights: the same weight on every used component (trace)
     # of a station (ISOLA-BaBoo, Zahradnik et al. 2026, sec. 2.4); removed
     # components are already absent from Dobs/G. One weight per trace, in the

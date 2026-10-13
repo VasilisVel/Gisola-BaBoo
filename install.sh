@@ -8,7 +8,7 @@
 # What it checks and, if you agree, installs (no administrator rights / sudo needed):
 #   - conda          (Miniforge, into ~/miniforge3, if no conda is found)
 #   - gfortran, make (from conda-forge, into the environment, if they are missing)
-#   - the CUDA libraries for an NVIDIA GPU (from conda-forge, into the environment, only if
+#   - numba-cuda and the CUDA libraries for an NVIDIA GPU (with pip, into the environment, only if
 #     a GPU is found and Numba cannot use it; the NVIDIA driver itself is never installed)
 # What it always does:
 #   - creates the conda environment GisolaBaBoo from environment.yml (an existing one is kept)
@@ -22,6 +22,7 @@ CONDA_BASE=""
 ASSUME_YES=0
 SKIP_GPU=0
 GPU_STATUS=""
+NUMBA_CUDA_VERSION="0.20.1"     # the newest numba-cuda that supports Python 3.9
 
 step() { echo; echo "==> $*"; }
 die()  { echo "ERROR: $*" >&2; exit 1; }
@@ -62,7 +63,7 @@ gpu_works() {
     (cd "$REPO_DIR/src" && python -c "import sys, check_gpu; ok, msg = check_gpu.run_check(); print(msg); sys.exit(0 if ok else 1)")
 }
 
-# Looks for an NVIDIA GPU and, if Numba cannot use it, offers to install the CUDA libraries into
+# Looks for an NVIDIA GPU and, if Numba cannot use it, offers to install numba-cuda (CUDA 12 or CUDA 13 variant) into
 # the environment. The program also runs on the CPU, so nothing here stops the installation: the result is
 # written to GPU_STATUS and printed at the end.
 gpu_setup() {
@@ -75,7 +76,7 @@ gpu_setup() {
         GPU_STATUS="no NVIDIA GPU found: the CPU is used"
         return 0
     fi
-    local name cc cuda_max major minor target need cc_major
+    local name cc cuda_max major minor extra cc_major
     name="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -n1)"
     cc="$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -n1 | tr -d ' ')"
     cuda_max="$(nvidia-smi 2>/dev/null | sed -n 's/.*CUDA \(UMD \)\{0,1\}Version: *\([0-9][0-9]*\.[0-9][0-9]*\).*/\2/p' | head -n1)"
@@ -89,41 +90,33 @@ gpu_setup() {
     fi
     echo "  Numba cannot use the GPU yet: $result"
 
-    # a crash of the test is not a missing library: installing the CUDA libraries would not help
-    case "$result" in
-        *crashed*)
-            GPU_STATUS="not usable: $result. The CPU is used."
-            return 0
-            ;;
-    esac
-
     major="${cuda_max%%.*}"
     minor="${cuda_max#*.}"
     if [ -z "$cuda_max" ] || ! [ "$major" -ge 12 ] 2>/dev/null; then
         GPU_STATUS="not set up: the driver supports CUDA ${cuda_max:-(unknown)} and CUDA 12 or newer is needed. Update the NVIDIA driver, or see the manual."
         return 0
     fi
-    # the newest CUDA 12 version that the driver supports (a newer driver also runs CUDA 12 libraries)
-    if [ "$major" -eq 12 ]; then target="12.$(( minor > 9 ? 9 : minor ))"; else target="12.9"; fi
-    # the oldest CUDA version that knows this GPU (the RTX 50 series and newer need 12.8)
-    need="12.0"
+    # the RTX 50 series and newer need CUDA 12.8 or newer
     cc_major="${cc%%.*}"
-    if [ -n "$cc_major" ] && [ "$cc_major" -ge 10 ] 2>/dev/null; then need="12.8"; fi
-    if [ "${target#12.}" -lt "${need#12.}" ]; then
-        GPU_STATUS="not set up: this GPU needs CUDA $need or newer, but the driver supports only CUDA $cuda_max. Update the NVIDIA driver."
+    if [ "$major" -eq 12 ] && [ -n "$cc_major" ] && [ "$cc_major" -ge 10 ] 2>/dev/null && [ "$minor" -lt 8 ] 2>/dev/null; then
+        GPU_STATUS="not set up: this GPU needs CUDA 12.8 or newer, but the driver supports only CUDA $cuda_max. Update the NVIDIA driver."
         return 0
     fi
+    # numba-cuda (maintained by NVIDIA) brings the CUDA libraries it needs: one variant for CUDA 12 drivers, one for CUDA 13
+    if [ "$major" -ge 13 ]; then extra="cu13"; else extra="cu12"; fi
 
-    if ask "  Install the CUDA $target libraries into the environment $ENV_NAME (from conda-forge, about 100 MB)?"; then
-        if conda install -y -n "$ENV_NAME" -c conda-forge --override-channels                "cuda-version=$target" cuda-cudart cuda-nvvm-impl cuda-nvvm-tools; then
+    if ask "  Install numba-cuda[$extra] (CUDA libraries for Numba, with pip, about 600 MB) into the environment $ENV_NAME?"; then
+        if python -m pip install --quiet -U "pip<25" && python -m pip install --quiet "numba-cuda[$extra]==$NUMBA_CUDA_VERSION"; then
+            # kernels cached with the CUDA code of Numba cannot be read by numba-cuda
+            rm -rf "$REPO_DIR/src/__pycache__" "$REPO_DIR/src/modules/__pycache__"
             if result="$(gpu_works)"; then
                 echo "  $result"
-                GPU_STATUS="ready: $result (CUDA $target libraries installed)"
+                GPU_STATUS="ready: $result (numba-cuda[$extra] installed)"
             else
-                GPU_STATUS="not working: the CUDA $target libraries were installed, but Numba still cannot use the GPU ($result). See the manual."
+                GPU_STATUS="not usable: numba-cuda[$extra] was installed, but Numba still cannot use the GPU ($result). The CPU is used. See the manual."
             fi
         else
-            GPU_STATUS="not set up: the CUDA libraries could not be installed. See the manual."
+            GPU_STATUS="not set up: numba-cuda could not be installed. The CPU is used. See the manual."
         fi
     else
         GPU_STATUS="not set up (you answered no): the CPU is used. See the manual to set it up yourself."

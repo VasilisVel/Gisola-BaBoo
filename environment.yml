@@ -9,8 +9,8 @@ name: GisolaBaBoo
 #
 # Only the conda-forge channel is used (no Anaconda "defaults" channel).
 #
-# GPU support: if you have an NVIDIA GPU, install.sh checks it and, with your permission, installs the
-# CUDA libraries into this environment (see the manual). Without a GPU the program runs on the CPU.
+# GPU support: if you have an NVIDIA GPU, install.sh checks it and, with your permission, installs
+# numba-cuda (the CUDA libraries for Numba) into this environment (see the manual). Without a GPU the program runs on the CPU.
 # Set ComputeDevice: GPU in the configuration file to use the GPU.
 channels:
   - conda-forge
