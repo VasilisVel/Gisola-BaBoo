@@ -99,14 +99,18 @@ gpu_setup() {
     if [ "$major" -ge 13 ]; then extra="cu13"; else extra="cu12"; fi
 
     if ask "  Install numba-cuda[$extra] (CUDA libraries for Numba, with pip, about 600 MB) into the environment $ENV_NAME?"; then
+        # the packages that this step adds, to be able to say how to remove them
+        local before added
+        before="$(python -m pip freeze 2>/dev/null | cut -d= -f1 | tr 'A-Z_' 'a-z-' | sort)"
         if python -m pip install --quiet -U "pip<25" && python -m pip install --quiet "numba-cuda[$extra]==$NUMBA_CUDA_VERSION"; then
+            added="$(comm -13 <(echo "$before") <(python -m pip freeze 2>/dev/null | cut -d= -f1 | tr 'A-Z_' 'a-z-' | sort) | tr '\n' ' ')"
             # kernels cached with the CUDA code of Numba cannot be read by numba-cuda
             rm -rf "$REPO_DIR/src/__pycache__" "$REPO_DIR/src/modules/__pycache__"
             if result="$(gpu_works)"; then
                 echo "  $result"
                 GPU_STATUS="ready: $result (numba-cuda[$extra] installed)"
             else
-                GPU_STATUS="not usable: numba-cuda[$extra] was installed, but Numba still cannot use the GPU ($result). The CPU is used. See the manual."
+                GPU_STATUS="not usable: numba-cuda[$extra] was installed, but Numba still cannot use the GPU ($result). The CPU is used. To remove it: python -m pip uninstall -y ${added:-numba-cuda}"
             fi
         else
             GPU_STATUS="not set up: numba-cuda could not be installed. The CPU is used. See the manual."
