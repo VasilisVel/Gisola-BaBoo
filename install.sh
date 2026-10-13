@@ -76,7 +76,7 @@ gpu_setup() {
         GPU_STATUS="no NVIDIA GPU found: the CPU is used"
         return 0
     fi
-    local name cc cuda_max major minor extra cc_major
+    local name cc cuda_max major extra
     name="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -n1)"
     cc="$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -n1 | tr -d ' ')"
     cuda_max="$(nvidia-smi 2>/dev/null | sed -n 's/.*CUDA \(UMD \)\{0,1\}Version: *\([0-9][0-9]*\.[0-9][0-9]*\).*/\2/p' | head -n1)"
@@ -91,15 +91,8 @@ gpu_setup() {
     echo "  Numba cannot use the GPU yet: $result"
 
     major="${cuda_max%%.*}"
-    minor="${cuda_max#*.}"
     if [ -z "$cuda_max" ] || ! [ "$major" -ge 12 ] 2>/dev/null; then
         GPU_STATUS="not set up: the driver supports CUDA ${cuda_max:-(unknown)} and CUDA 12 or newer is needed. Update the NVIDIA driver, or see the manual."
-        return 0
-    fi
-    # the RTX 50 series and newer need CUDA 12.8 or newer
-    cc_major="${cc%%.*}"
-    if [ "$major" -eq 12 ] && [ -n "$cc_major" ] && [ "$cc_major" -ge 10 ] 2>/dev/null && [ "$minor" -lt 8 ] 2>/dev/null; then
-        GPU_STATUS="not set up: this GPU needs CUDA 12.8 or newer, but the driver supports only CUDA $cuda_max. Update the NVIDIA driver."
         return 0
     fi
     # numba-cuda (maintained by NVIDIA) brings the CUDA libraries it needs: one variant for CUDA 12 drivers, one for CUDA 13
