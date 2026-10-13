@@ -9,7 +9,7 @@ Run once after installation (or after updating IsolaPy.py):
     python precompile.py
 
 CPU kernels are compiled unconditionally.
-GPU kernels are compiled only if a CUDA device is present.
+GPU kernels are compiled only if the GPU works (the test of check_gpu.py).
 All compiled code is written to the Numba cache dir and reused
 on every subsequent run without recompilation.
 """
@@ -95,12 +95,10 @@ def clip_mouse():
 step(6, 'CPU clipping and mouse checks', clip_mouse)
 
 # ── 5. GPU kernels (conditional) ──────────────────────────────────────────────
-_gpu_available = False
-try:
-    from numba import cuda
-    _gpu_available = len(list(cuda.gpus)) > 0
-except Exception:
-    pass
+# The GPU test runs in a separate process: if it crashes (for example with a driver that
+# this Numba version does not support) the pre-compilation goes on without the GPU kernels.
+import check_gpu
+_gpu_available, _gpu_message = check_gpu.run_check()
 
 if _gpu_available:
     def gpu():
@@ -108,6 +106,6 @@ if _gpu_available:
         isola._bootstrap_members(G, obs, Wc, 0.1, shifts, Coords, n_keep, use_gpu=True)
     step(7, 'GPU kernels', gpu)
 else:
-    print('  [{}/{}] {:<42s} skipped (no CUDA GPU found)'.format(N_STEPS, N_STEPS, 'GPU kernels'), flush=True)
+    print('  [{}/{}] {:<42s} skipped ({})'.format(N_STEPS, N_STEPS, 'GPU kernels', _gpu_message), flush=True)
 
 print('Done in {:.2f} s. The kernels are cached and ready to run.'.format(time.time() - t_total), flush=True)

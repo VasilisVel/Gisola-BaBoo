@@ -57,7 +57,9 @@ ask() {
 
 # True when Numba can really use the GPU (driver, CUDA libraries and a small test kernel).
 gpu_works() {
-    (cd "$REPO_DIR/src" && python check_gpu.py)
+    # the test runs in a separate process (check_gpu.run_check): a crash of the driver or of Numba
+    # (segmentation fault) is reported here as a message and does not stop the installation
+    (cd "$REPO_DIR/src" && python -c "import sys, check_gpu; ok, msg = check_gpu.run_check(); print(msg); sys.exit(0 if ok else 1)")
 }
 
 # Looks for an NVIDIA GPU and, if Numba cannot use it, offers to install the CUDA libraries into
@@ -76,7 +78,7 @@ gpu_setup() {
     local name cc cuda_max major minor target need cc_major
     name="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -n1)"
     cc="$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -n1 | tr -d ' ')"
-    cuda_max="$(nvidia-smi 2>/dev/null | sed -n 's/.*CUDA Version: *\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' | head -n1)"
+    cuda_max="$(nvidia-smi 2>/dev/null | sed -n 's/.*CUDA \(UMD \)\{0,1\}Version: *\([0-9][0-9]*\.[0-9][0-9]*\).*/\2/p' | head -n1)"
     echo "  found: $name (compute capability ${cc:-unknown}); the driver supports CUDA up to ${cuda_max:-unknown}"
 
     local result
@@ -86,6 +88,14 @@ gpu_setup() {
         return 0
     fi
     echo "  Numba cannot use the GPU yet: $result"
+
+    # a crash of the test is not a missing library: installing the CUDA libraries would not help
+    case "$result" in
+        *crashed*)
+            GPU_STATUS="not usable: $result. The CPU is used."
+            return 0
+            ;;
+    esac
 
     major="${cuda_max%%.*}"
     minor="${cuda_max#*.}"
@@ -214,7 +224,8 @@ gpu_setup
 # ---------------------------------------------------------------------------
 step "Pre-compiling the Numba kernels (one time, about 20 s)"
 cd "$REPO_DIR/src"
-python precompile.py
+# not required: if it does not finish, the kernels are compiled the first time they run
+python precompile.py || echo "  (the pre-compilation did not finish; it is not required)"
 
 # ---------------------------------------------------------------------------
 step "Adding ulimit to ~/.bashrc"

@@ -249,7 +249,7 @@ def _boot_combine_task(Rt, Ct, wc, k, rr, scale, MULTIP, R, L, A, g, y, x, vr_ro
 # GPU / CUDA support
 # ========================================================================
 try:
-    _CUDA_AVAILABLE = len(list(cuda.gpus)) > 0
+    _CUDA_AVAILABLE = cuda.is_available()
 except Exception:
     _CUDA_AVAILABLE = False
 

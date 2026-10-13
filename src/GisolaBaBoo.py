@@ -153,16 +153,17 @@ except Exception:
 # Falls back to CPU if no CUDA device is available.
 _compute_device = str(_cfg.get('ComputeDevice', 'CPU')).upper()
 if _compute_device == 'GPU':
+    # the GPU test runs in a separate process, so a crash of the driver/Numba cannot stop the run
     try:
-        from numba import cuda as _cuda
-        _gpu_ok = len(list(_cuda.gpus)) > 0
-    except Exception:
-        _gpu_ok = False
+        import check_gpu as _check_gpu
+        _gpu_ok, _gpu_msg = _check_gpu.run_check()
+    except Exception as _e:
+        _gpu_ok, _gpu_msg = False, str(_e)
     if _gpu_ok:
         IsolaPy._USE_GPU = True
         print('[INFO] Compute device : GPU', flush=True)
     else:
-        print('[INFO] GPU requested but no CUDA device found — using CPU', flush=True)
+        print('[INFO] GPU requested but not usable ({}) — using CPU'.format(_gpu_msg), flush=True)
 else:
     print('[INFO] Compute device : CPU', flush=True)
 # ----------------------------------------------------------------------
