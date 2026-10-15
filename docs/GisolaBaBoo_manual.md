@@ -515,7 +515,7 @@ The user controls the bootstrap through three settings:
 - **Search region:** the bootstrap can be restricted to a subgrid to make it faster, either with the bounding box of the grid points whose VR is at least CentroidBoxVR × VRmax, or with a box of ±Dx, ±Dy, ±Dz km around the best centroid, defined by the user for each magnitude range (CentroidBox, which takes precedence where it applies). If both are null, the bootstrap runs on the whole grid. The box limits only the space: every repetition searches all the time shifts.
 - **Accepted solutions (KeepFraction):** NBEST is derived from the fraction as NBEST = KeepFraction × (number of grid points in the search region × number of time shifts), rounded down and at least 1. With 0, NBEST = 1: only the best solution of each repetition is kept, as in the original, strict Bayesian bootstrap. A positive fraction also keeps near-optimal solutions, which gives a smoother ensemble with wider intervals, as in ISOLA-BaBoo.
 
-The result is an ensemble of NBEST × Iterations solutions. From it, Gisola-BaBoo computes the median moment tensor, with its nodal planes, M0 and Mw, and the median values and the 68 % and 95 % confidence intervals of the tensor components, M0, Mw, DC, CLVD, ISO, the centroid position and the centroid time.
+The result is an ensemble of NBEST × Iterations solutions. From it, Gisola-BaBoo computes the mean moment tensor, with its nodal planes, and the mean values and the 68 % and 95 % confidence intervals of the tensor components, M0, Mw, DC, CLVD, ISO, the centroid position and the centroid time.
 
 ## Outputs
 
@@ -558,7 +558,7 @@ When several rules match an event (see Inversion Parameters), every combination 
 | solutions, correlations | the best solution at every grid point; the correlation and mechanism for every depth and time shift below the best epicentral position (as ISOLA's corr00.dat). |
 | results_inversion.dat | the best solution in text form (VR, moment tensor, planes, M0, Mw, DC/CLVD/ISO, axes). |
 | inversion_parameters.dat | all settings used: inversion type, window, band, Green's-function frequencies, time shifts, grid, bootstrap centroid box, crustal model. |
-| bootstrap_results.dat | ensemble statistics (median, 68 %, 95 %), the median moment tensor and the computation time of the bootstrap. |
+| bootstrap_results.dat | ensemble statistics (mean, 68 %, 95 %), the mean moment tensor and the computation time of the bootstrap. |
 | GraphSearch*.dat | graph-search centroid. |
 | event_summary.json | short summary read by the catalog pages. |
 | timing_summary.dat | time of each step (the time of each figure is in the log). |
@@ -585,12 +585,12 @@ The figures of the best combination are in output/plots/, as PNG files, and are 
 | hist_centroid_time | histograms of the centroid time and of the X, Y and Z position of the ensemble |
 | tradeoff_depth_vr | the ensemble members as CLVD against VR (coloured by depth) and CLVD against depth (coloured by VR), to show the trade-offs between source type, fit and depth |
 | tradeoff_depth_vr_iso | the same with ISO instead of CLVD; only for a full moment tensor |
-| hudson_median | the ensemble in the Hudson source-type plot, coloured by VR, with the median solution |
-| lune_median | the same ensemble in the lune source-type plot (Tape and Tape) |
-| beachball_fuzzy | the uncertainty of the mechanism: the shading shows, for each direction, the fraction of ensemble members that have tension (dark) or compression (light) there, with the best (red) and median (green) nodal planes |
+| hudson_mean | the ensemble in the Hudson source-type plot, coloured by VR, with the mean solution |
+| lune_mean | the same ensemble in the lune source-type plot (Tape and Tape) |
+| beachball_fuzzy | the uncertainty of the mechanism: the shading shows, for each direction, the fraction of ensemble members that have tension (dark) or compression (light) there, with the best (red) and mean (green) nodal planes |
 | grid_vr_bootstrap | the source grid in map view and in two vertical sections, coloured by VR, with the part used by the bootstrap and the best solution |
 
-In the histograms, the red line is the median, the dashed blue lines are the 68 % interval, the dotted green lines are the 95 % interval and the dashed black line is the best solution.
+In the histograms, the red line is the mean, the dashed blue lines are the 68 % interval, the dotted green lines are the 95 % interval and the dashed black line is the best solution.
 
 ### Web pages
 

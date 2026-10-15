@@ -1960,7 +1960,7 @@ def _hammer_xy(gamma_deg, delta_deg):
             np.sqrt(2.0) * np.sin(d) / den)
 
 
-def _lune_plot(M_all, VR, median_M, best_M, outpath):
+def _lune_plot(M_all, VR, mean_M, best_M, outpath):
     """Lune source-type plot (Tape & Tape 2012) of the whole bootstrap
     ensemble, Hammer equal-area projection, members coloured by VR."""
     fig, ax = plt.subplots(figsize=(5.5, 8))
@@ -2004,9 +2004,9 @@ def _lune_plot(M_all, VR, median_M, best_M, outpath):
             dy = 0.07 if ha == 'center' else 0.0
         ax.text(rx[0] + dx, ry[0] + dy, label, ha=ha, va='center', fontsize=9, zorder=5)
 
-    # best solution, then the median moment tensor on top of it
+    # best solution, then the mean moment tensor on top of it
     for M, mk, col, lab, z in ((best_M, 's', 'black', 'Best solution', 6),
-                               (median_M, '*', 'red', 'Median MT', 7)):
+                               (mean_M, '*', 'red', 'Mean MT', 7)):
         if M is None:
             continue
         mg, md = _lune_coords(np.asarray(M, dtype=float)[None])
@@ -2134,11 +2134,11 @@ def _fmt_nz(fmt, v):
 
 
 def _ci_stats(values):
-    """Median, 68% CI (16th-84th pct) and 95% CI (2.5th-97.5th pct) of an
+    """Mean, 68% CI (16th-84th pct) and 95% CI (2.5th-97.5th pct) of an
     ensemble quantity, as reported in ISOLA-BaBoo (Zahradnik et al. 2026).
-    Returns (median, p16, p84, p2.5, p97.5)."""
+    Returns (mean, p16, p84, p2.5, p97.5)."""
     v = np.asarray(values, dtype=float)
-    return (float(np.median(v)),) + tuple(
+    return (float(np.mean(v)),) + tuple(
         float(p) for p in np.percentile(v, [15.87, 84.13, 2.5, 97.5]))
 
 
@@ -2491,33 +2491,29 @@ def getBootstrapping(num_iterations=None, num_realizations=None):
     Magnitudes = np.column_stack((M0_all, Mw_all))
     MagnitudesMean = np.mean(Magnitudes, axis=0)
 
-    mt_mean = np.mean(mt_array, axis=0)
     mt_std = np.std(mt_array, axis=0)
 
-    # ---- median moment tensor (ISOLA-BaBoo, Zahradnik et al. 2026) ----
-    # component-wise median of the members' six MT components (Mxx..Myz, NED),
-    # taken on the tensors themselves, not on the ISOLA a-coefficients
+    # ---- mean moment tensor ----
+    # component-wise mean of the members' six MT components (Mxx..Myz, NED),
+    # taken on the tensors themselves, not on the ISOLA a-coefficients. The mean
+    # is linear, so a deviatoric ensemble gives a deviatoric mean (trace 0).
     M_all = np.concatenate([r[10] for r in BootstrapAngles])     # (n, 3, 3)
-    M_median = np.median(M_all, axis=0)
-    if _BOOT_CTX.get("components", mt_array.shape[1]) == 5:
-        # deviatoric inversion: every member has zero trace, but the
-        # component-wise median need not - remove the spurious isotropic part
-        M_median = M_median - (np.trace(M_median) / 3.0) * np.eye(3)
-    # a-coefficients of the median MT (input format of silsub / plots)
-    mt_median = moment_tensor_to_a(M_median)
-    # per-component statistics of the members' tensors
+    M_mean = np.mean(M_all, axis=0)
+    # a-coefficients of the mean MT (input format of silsub / plots)
+    mt_mean = moment_tensor_to_a(M_mean)
+    # per-component statistics of the members' tensors (mean, 68% and 95% intervals)
     _comp_idx = (('Mxx', 0, 0), ('Myy', 1, 1), ('Mzz', 2, 2),
                  ('Mxy', 0, 1), ('Mxz', 0, 2), ('Myz', 1, 2))
     M_comp_stats = OrderedDict((name, _ci_stats(M_all[:, i, j]))
                                for name, i, j in _comp_idx)
 
-    # nodal planes of the median moment tensor, not statistics of
+    # nodal planes of the mean moment tensor, not statistics of
     # per-member strike/dip/rake
-    _med_angl = silsub(np.ascontiguousarray(mt_median[None, :], dtype=np.float64))
-    plane1_median = _med_angl[0][0]
-    plane2_median = _med_angl[1][0]
+    _mean_angl = silsub(np.ascontiguousarray(mt_mean[None, :], dtype=np.float64))
+    plane1_mean = _mean_angl[0][0]
+    plane2_mean = _mean_angl[1][0]
 
-    # ensemble statistics as in the paper: median, 68% and 95% intervals
+    # ensemble statistics: mean, 68% and 95% intervals
     ens_stats = OrderedDict(
         (name, _ci_stats(arr)) for name, arr in (
             ('M0', M0_all), ('Mw', Mw_all),
@@ -2536,7 +2532,7 @@ def getBootstrapping(num_iterations=None, num_realizations=None):
     global _BOOT_PLOT_CTX
     _BOOT_PLOT_CTX = dict(
         plotdir=plotdir, Dobs=Dobs, result=result, VR_all=VR_all,
-        mt_mean=mt_mean, mt_median=mt_median,
+        mt_mean=mt_mean,
         SolutionParts=SolutionParts, BestParts=BestParts, Magnitudes=Magnitudes,
         BestMagnitudes=BestMagnitudes, all_times=all_shifts * Dt, all_coords=all_coords,
         CMT_BEST=CMT_BEST, BootstrapAngles=BootstrapAngles,
@@ -2551,11 +2547,11 @@ def getBootstrapping(num_iterations=None, num_realizations=None):
             'n_iterations': int(num_iterations),
             'vr_max': float(VR_all.max()),
             'vr_min': float(VR_all.min()),
-            'p1_med': plane1_median,
-            'p2_med': plane2_median,
+            'p1_mean': plane1_mean,
+            'p2_mean': plane2_mean,
             'full_mt': bool(np.std(ISO_all) > 1e-6 or abs(result.get('BestISO', 0.0)) > 1e-8),
         }
-        # (median, p16, p84, p2.5, p97.5) per quantity
+        # (mean, p16, p84, p2.5, p97.5) per quantity
         for _key, _name in (('x', 'X'), ('y', 'Y'), ('z', 'Z'), ('time', 'T'),
                             ('Mo', 'M0'), ('Mw', 'Mw'), ('DC', 'DC'),
                             ('CLVD', 'CLVD'), ('ISO', 'ISO')):
@@ -2582,40 +2578,37 @@ def getBootstrapping(num_iterations=None, num_realizations=None):
         'computeTime':        computeTime,
         'result':             result,
         'best_idx':           best_idx,
-        'plane1_median':      plane1_median,   # planes of the median MT
-        'plane2_median':      plane2_median,
-        'M_median':           M_median,        # 3x3 NED median moment tensor
-        'M_comp_stats':       M_comp_stats,    # per-component median/68%/95%
-        'ens_stats':          ens_stats,       # median, p16, p84, p2.5, p97.5
+        'plane1_mean':      plane1_mean,   # planes of the mean MT
+        'plane2_mean':      plane2_mean,
+        'M_mean':             M_mean,          # 3x3 NED mean moment tensor
+        'M_comp_stats':       M_comp_stats,    # per-component mean/68%/95%
+        'ens_stats':          ens_stats,       # mean, p16, p84, p2.5, p97.5
         'vr_min':             float(VR_all.min()),
         'vr_max':             float(VR_all.max()),
         'n_members':          int(len(VR_all)),
-        'MagnitudesMedian':   np.median(Magnitudes, axis=0),
         'MagnitudesStd':      np.std(Magnitudes, axis=0),
         'MagnitudesP16':      np.percentile(Magnitudes, 15.87, axis=0),
         'MagnitudesP84':      np.percentile(Magnitudes, 84.13, axis=0),
         'MagnitudesMean':     MagnitudesMean,
-        'SolutionPartsMedian': np.median(SolutionParts, axis=0),
         'SolutionPartsStd':   np.std(SolutionParts, axis=0),
         'SolutionPartsP16':   np.percentile(SolutionParts, 15.87, axis=0),
         'SolutionPartsP84':   np.percentile(SolutionParts, 84.13, axis=0),
         'SolutionPartsMean':  SolutionPartsMean,
         'mt_mean':            mt_mean,
-        'mt_median':          mt_median,
         'mt_std':             mt_std,
         'plotsTime':          plotsTime,
         'plotdir':            plotdir,
         'xyt_stats': {
-            'X (km)': (float(np.median(all_coords[:, 0])),
+            'X (km)': (float(np.mean(all_coords[:, 0])),
                        float(np.percentile(all_coords[:, 0], 15.87)),
                        float(np.percentile(all_coords[:, 0], 84.13))),
-            'Y (km)': (float(np.median(all_coords[:, 1])),
+            'Y (km)': (float(np.mean(all_coords[:, 1])),
                        float(np.percentile(all_coords[:, 1], 15.87)),
                        float(np.percentile(all_coords[:, 1], 84.13))),
-            'Z (km)': (float(np.median(all_coords[:, 2])),
+            'Z (km)': (float(np.mean(all_coords[:, 2])),
                        float(np.percentile(all_coords[:, 2], 15.87)),
                        float(np.percentile(all_coords[:, 2], 84.13))),
-            'T (s)':  (float(np.median(all_shifts * Dt)),
+            'T (s)':  (float(np.mean(all_shifts * Dt)),
                        float(np.percentile(all_shifts * Dt, 15.87)),
                        float(np.percentile(all_shifts * Dt, 84.13))),
         },
@@ -2641,7 +2634,7 @@ def getBootstrapping(num_iterations=None, num_realizations=None):
     # write bootstrap_results.dat
     try:
         _s    = _SUMMARY
-        _pm1, _pm2 = _s['plane1_median'], _s['plane2_median']
+        _pm1, _pm2 = _s['plane1_mean'], _s['plane2_mean']
         _es = _s['ens_stats']
         _bl = []
         def _bw(line=''):
@@ -2660,15 +2653,15 @@ def getBootstrapping(num_iterations=None, num_realizations=None):
             _s['itersTime'] / max(1, _s['num_iterations'])))
         _bw('VR range of the ensemble: {:.1f} – {:.1f} %'.format(_s['vr_min'], _s['vr_max']))
         _bw()
-        _Mm = _s['M_median']
-        _bw('Median moment tensor (component-wise median of the ensemble, NED, N·m):')
+        _Mm = _s['M_mean']
+        _bw('Mean moment tensor (component-wise mean of the ensemble, NED, N·m):')
         _bw('Mxx = {:.3e}  Myy = {:.3e}  Mzz = {:.3e}'.format(_Mm[0, 0], _Mm[1, 1], _Mm[2, 2]))
         _bw('Mxy = {:.3e}  Mxz = {:.3e}  Myz = {:.3e}'.format(_Mm[0, 1], _Mm[0, 2], _Mm[1, 2]))
         _bw()
-        _bw('Plane 1: Strike = {:.0f}, Dip = {:.0f}, Rake = {:.0f}'.format(*_pm1))
-        _bw('Plane 2: Strike = {:.0f}, Dip = {:.0f}, Rake = {:.0f}'.format(*_pm2))
+        _bw('Plane 1 (mean MT): Strike = {:.0f}, Dip = {:.0f}, Rake = {:.0f}'.format(*_pm1))
+        _bw('Plane 2 (mean MT): Strike = {:.0f}, Dip = {:.0f}, Rake = {:.0f}'.format(*_pm2))
         _bw()
-        _bw('Ensemble statistics — median, 68% CI [16th – 84th percentile],')
+        _bw('Ensemble statistics — mean, 68% CI [16th – 84th percentile],')
         _bw('                      95% CI [2.5th – 97.5th percentile]:')
         _bstat('M0 (N·m)', 'M0', '{:.3e}')
         _bstat('Mw', 'Mw', '{:.2f}')
@@ -2676,7 +2669,7 @@ def getBootstrapping(num_iterations=None, num_realizations=None):
         _bstat('CLVD (%)', 'CLVD', '{:.0f}')
         _bstat('ISO (%)', 'ISO', '{:.0f}')
         _bw()
-        _bw('Moment tensor components (NED, N·m):')
+        _bw('Moment tensor components: mean, 68% and 95% intervals (NED, N·m):')
         for _cname, (_med, _p16, _p84, _p025, _p975) in _s['M_comp_stats'].items():
             _bw('{:<16s}: {:.3e}   68%: [{:.3e} – {:.3e}]   95%: [{:.3e} – {:.3e}]'.format(
                 _cname, _med, _p16, _p84, _p025, _p975))
@@ -2697,11 +2690,11 @@ def getBootstrapping(num_iterations=None, num_realizations=None):
 
 
 def _ci_lines(ax, data, fmt='%.2f'):
-    """Median (red), 68% CI (blue) and 95% CI (green) as vertical lines,
+    """Mean (red), 68% CI (blue) and 95% CI (green) as vertical lines,
     the convention of the ISOLA-BaBoo histograms (Zahradnik et al. 2026)."""
     med, p16, p84, p025, p975 = _ci_stats(data)
     ax.axvline(med, color='red', linestyle='-', linewidth=2.0,
-               label=('Median ' + fmt) % med)
+               label=('Mean ' + fmt) % med)
     ax.axvline(p16, color='blue', linestyle='--', linewidth=1.5,
                label=('68%% CI [' + fmt + ', ' + fmt + ']') % (p16, p84))
     ax.axvline(p84, color='blue', linestyle='--', linewidth=1.5)
@@ -2719,7 +2712,7 @@ _FIG_CTX = None
 def _hist_row(plotdir, data2d, bests, titles, suptitle, fname,
               xranges=None, col_indices=None, fmts=None,
               panel_size=(6, 4)):
-    """Histograms with median + 68% + 95% CI lines and the best solution.
+    """Histograms with mean + 68% + 95% CI lines and the best solution.
     col_indices: which columns of data2d/bests to use (default: all).
     xranges: per-panel (min, max) or None."""
     if col_indices is None:
@@ -2934,11 +2927,11 @@ def _fig_hudson():
         return
     c = _FIG_CTX
     u_vals, v_vals = _hudson_uv(_fig_all_mats(c))
-    mt_median = c['mt_median']
-    mt_median6 = np.append(mt_median, 0) if len(mt_median) == 5 else mt_median
-    median_mt = pmt.MomentTensor(m=build_moment_tensor(np.asarray(mt_median6, dtype=np.float64)))
-    _hudson_cloud_plot(u_vals, v_vals, np.asarray(c['VR_all'], dtype=float), median_mt,
-                       'Median solution', os.path.join(c['plotdir'], _rv('hudson_median.png')))
+    mt_mean = c['mt_mean']
+    mt_mean6 = np.append(mt_mean, 0) if len(mt_mean) == 5 else mt_mean
+    mean_mt = pmt.MomentTensor(m=build_moment_tensor(np.asarray(mt_mean6, dtype=np.float64)))
+    _hudson_cloud_plot(u_vals, v_vals, np.asarray(c['VR_all'], dtype=float), mean_mt,
+                       'Mean solution', os.path.join(c['plotdir'], _rv('hudson_mean.png')))
 
 
 def _fig_fuzzy():
@@ -2950,22 +2943,22 @@ def _fig_fuzzy():
     all_mats = _fig_all_mats(c)
     best_mt = pmt.MomentTensor(m=c['result']["Tensor"])
     best_norm = pmt.MomentTensor(m=best_mt.m() / best_mt.scalar_moment()).deviatoric()
-    # median moment tensor (same tensor as in the .dat / Hudson / lune plots)
-    mt_median = c['mt_median']
-    mt_median6 = np.append(mt_median, 0) if len(mt_median) == 5 else mt_median
-    med_mt = pmt.MomentTensor(m=build_moment_tensor(np.asarray(mt_median6, dtype=np.float64)))
-    med_norm = pmt.MomentTensor(m=med_mt.m() / med_mt.scalar_moment()).deviatoric()
+    # mean moment tensor (same tensor as in the .dat / Hudson / lune plots)
+    mt_mean = c['mt_mean']
+    mt_mean6 = np.append(mt_mean, 0) if len(mt_mean) == 5 else mt_mean
+    mean_mt = pmt.MomentTensor(m=build_moment_tensor(np.asarray(mt_mean6, dtype=np.float64)))
+    mean_norm = pmt.MomentTensor(m=mean_mt.m() / mean_mt.scalar_moment()).deviatoric()
     fig = plt.figure(figsize=(7., 7.))
     ax = fig.add_subplot(1, 1, 1)
     _plot_fuzzy_beachball_all(all_mats, ax, best_norm, size=250, position=(0, 0),
                               color_t='black', edgecolor='black',
-                              extra_mts=[(med_norm, 'limegreen')])
+                              extra_mts=[(mean_norm, 'limegreen')])
     ax.set_xlim(-150, 150); ax.set_ylim(-150., 150)
     ax.set_aspect('equal'); ax.set_axis_off()
     plt.title("Moment Tensor Uncertainty\nBootstrap Ensemble, N = %d"
               % all_mats.shape[0], fontsize=16, fontweight='bold')
     ax.legend(handles=[Line2D([0], [0], color='red', lw=2, label='Best Solution'),
-                       Line2D([0], [0], color='limegreen', lw=2, label='Median Solution')],
+                       Line2D([0], [0], color='limegreen', lw=2, label='Mean Solution')],
               loc='upper right', bbox_to_anchor=(1.1, 0.95))
     fig.savefig(os.path.join(c['plotdir'], _rv('beachball_fuzzy.png')), dpi=150,
                 bbox_inches='tight', pad_inches=0.15)
@@ -2975,12 +2968,12 @@ def _fig_fuzzy():
 def _fig_lune():
     # lune source-type plot of ALL ensemble members (no pyrocko needed)
     c = _FIG_CTX
-    mt_median = c['mt_median']
-    mt_median6 = np.append(mt_median, 0) if len(mt_median) == 5 else mt_median
+    mt_mean = c['mt_mean']
+    mt_mean6 = np.append(mt_mean, 0) if len(mt_mean) == 5 else mt_mean
     _lune_plot(_fig_all_mats(c), c['VR_all'],
-               build_moment_tensor(np.asarray(mt_median6, dtype=np.float64)),
+               build_moment_tensor(np.asarray(mt_mean6, dtype=np.float64)),
                np.asarray(c['result']['Tensor'], dtype=float),
-               os.path.join(c['plotdir'], _rv('lune_median.png')))
+               os.path.join(c['plotdir'], _rv('lune_mean.png')))
 
 
 # one task per bootstrap figure (each independent: reads _FIG_CTX, writes one PNG)
@@ -3733,8 +3726,8 @@ def _renderBootstrapPage(plotdir, st, result):
     with a thin grey rule), placed right after the "Best Moment Tensor Solution"
     section and BEFORE the Gisola logo footer. Sections, in order:
        1. Moment Tensor Statistics  - fuzzy uncertainty beachball (left) +
-          median-MT planes, Mw, Mo; ensemble size and VR range.
-       2. Ensemble Statistics - median, 68% and 95% CI of Mw, DC, CLVD,
+          mean-MT planes, Mw, Mo; ensemble size and VR range.
+       2. Ensemble Statistics - mean, 68% and 95% CI of Mw, DC, CLVD,
           ISO, x/y/z and centroid time + centroid/time, decomposition and
           Mo/Mw histograms.
        3. Uncertainty Visualization  - Hudson, lune, depth/VR trade-off, ISO.
@@ -3780,16 +3773,16 @@ def _renderBootstrapPage(plotdir, st, result):
             f=FONT, l=label, v=value)
 
     # ---- section 1: Moment Tensor Statistics (beachball left, stats right) ----
-    # planes of the median MT; Mw and Mo are the ensemble medians
-    p1, p2 = st['p1_med'], st['p2_med']
+    # planes of the mean MT; Mw and Mo are the ensemble means
+    p1, p2 = st['p1_mean'], st['p2_mean']
 
     mt_stats = (
-        kv('NP1 strike/dip/rake',
+        kv('NP1 strike/dip/rake (mean MT)',
            '{:.0f} / {:.0f} / {:.0f}'.format(p1[0], p1[1], p1[2]))
-        + kv('NP2 strike/dip/rake',
+        + kv('NP2 strike/dip/rake (mean MT)',
              '{:.0f} / {:.0f} / {:.0f}'.format(p2[0], p2[1], p2[2]))
-        + kv('Mw (ensemble median)', '{:.2f}'.format(st['Mw'][0]))
-        + kv('Mo (ensemble median, Nm)', '{:.3e}'.format(st['Mo'][0]))
+        + kv('Mw (ensemble mean)', '{:.2f}'.format(st['Mw'][0]))
+        + kv('Mo (ensemble mean, Nm)', '{:.3e}'.format(st['Mo'][0]))
         + kv('Ensemble members',
              '{} (from {} resamplings)'.format(st['n_solutions'], st['n_iterations']))
         + kv('VR range (%)', '{:.1f} &ndash; {:.1f}'.format(st['vr_min'], st['vr_max'])))
@@ -3831,7 +3824,7 @@ def _renderBootstrapPage(plotdir, st, result):
         '<table style="border-collapse:collapse;margin:8px auto;max-width:760px;'
         'width:100%">'
         '<tr><th style="{th};text-align:left">Quantity</th>'
-        '<th style="{th}">Median</th><th style="{th}">68% CI</th>'
+        '<th style="{th}">Mean</th><th style="{th}">68% CI</th>'
         '<th style="{th}">95% CI</th></tr>{r}</table>').format(th=TH, r=loc_rows)
     # centroid / time histograms, then decomposition and magnitude histograms
     loc_plot = ('<div style="text-align:center;margin-top:8px">'
@@ -3858,8 +3851,8 @@ def _renderBootstrapPage(plotdir, st, result):
     unc = (
         '<div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;'
         'align-items:flex-start;max-width:1300px;margin:6px auto">'
-        + _cell('hudson_median.png', 380, 440, 480)
-        + _cell('lune_median.png', 300, 330, 480)
+        + _cell('hudson_mean.png', 380, 440, 480)
+        + _cell('lune_mean.png', 300, 330, 480)
         + _cell('tradeoff_depth_vr.png', 600, 880)
         + _cell('tradeoff_depth_vr_iso.png', 600, 880)      # below it, same size (full MT)
         + _cell('hist_iso.png', 380, 440)
@@ -3875,7 +3868,7 @@ def _renderBootstrapPage(plotdir, st, result):
         '<div id="bootstrap-results" style="max-width:900px;margin:0 auto;'
         'padding:10px 20px 20px;background:#ffffff;font-family:' + FONT + '">'
         + title('Statistical Uncertainty Analysis', 24)
-        + title('Median Moment Tensor') + mt_panel
+        + title('Mean Moment Tensor') + mt_panel
         + title('Ensemble Statistics') + loc_table + loc_plot
         + title('Uncertainty Visualization') + unc
         + title('Bootstrap Box') + box
