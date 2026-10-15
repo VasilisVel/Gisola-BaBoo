@@ -166,8 +166,8 @@ Inversion:
 # Bayesian bootstrap: the inversion is repeated with random station weights (manual: Bayesian Bootstrap)
 Bootstrap:
   Enabled: true             # false = no bootstrap
-  Iterations: 100           # number of iterations (sets of station weights)
-  KeepFraction: 0.02        # top fraction of all (grid point, time shift) pairs kept per iteration
+  Iterations: 1000           # number of iterations (sets of station weights)
+  KeepFraction: 0        # top fraction of all (grid point, time shift) pairs kept per iteration; 0 = only the best one
   # Grid points searched (space only; all time shifts are always searched). The first that applies is used:
   # CentroidBox if one of its rules matches the magnitude, then CentroidBoxVR, then the full grid.
   CentroidBoxVR: 0.7        # grid points with VR >= this fraction x VRmax (bounding box); null = not used

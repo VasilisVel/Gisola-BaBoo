@@ -486,13 +486,13 @@ Inversion:
 
 ### Bayesian Bootstrap
 
-The Bayesian bootstrap is used to characterize the solution statistically (Zahradník et al. 2026). The inversion is repeated Iterations times (default 100), each time with a different random set of station weights drawn from a Dirichlet distribution. The weights adjust the relative importance of the stations, and all components of a station share the same weight. In each repetition, the best-fitting solutions (NBEST) are retained.
+The Bayesian bootstrap is used to characterize the solution statistically (Zahradník et al. 2026). The inversion is repeated Iterations times (default 1000), each time with a different random set of station weights drawn from a Dirichlet distribution. The weights adjust the relative importance of the stations, and all components of a station share the same weight. In each repetition, the best-fitting solutions (NBEST) are retained.
 
 ```yaml
 Bootstrap:
   Enabled: true
-  Iterations: 100       # number of random sets of station weights
-  KeepFraction: 0.02    # NBEST: fraction of (point, shift) pairs
+  Iterations: 1000      # number of random sets of station weights
+  KeepFraction: 0       # NBEST: fraction of (point, shift) pairs
   CentroidBoxVR: 0.7    # points with VR >= 0.7 x VRmax; null = off
   CentroidBox: null     # rules [Mmin, Mmax, Dx, Dy, Dz] km
   #  - [0.0,  5.5,  6,  6, 8]
@@ -504,8 +504,8 @@ Bootstrap:
 | Key | Meaning |
 |---|---|
 | Enabled | true / false. When false, only the best solution is reported. |
-| Iterations | number of bootstrap iterations, each with its own random set of station weights (default 100). |
-| KeepFraction | NBEST, the number of best (grid point, time shift) pairs kept in each repetition, as a fraction of all pairs in the centroid box (0.02 in the example, 0.1 if the key is missing). With 0, only the single best pair is kept in each repetition, as in the original Bayesian bootstrap. A positive fraction also keeps near-optimal pairs, which gives a smoother ensemble with wider intervals, as in ISOLA-BaBoo (Zahradník et al. 2026). A grid point can enter several times with different time shifts. |
+| Iterations | number of bootstrap iterations, each with its own random set of station weights (default 1000). |
+| KeepFraction | NBEST, the number of best (grid point, time shift) pairs kept in each repetition, as a fraction of all pairs in the centroid box (0 in the example, 0.1 if the key is missing). With 0, the default of the configuration file, only the single best pair is kept in each repetition, as in the original Bayesian bootstrap. A positive fraction also keeps the near-optimal pairs of each repetition, to reduce the overconfidence of a single best-fit solution, as in ISOLA-BaBoo (Zahradník et al., 2026). A grid point can enter several times with different time shifts. |
 | CentroidBoxVR | the grid points searched: the bounding box (in X, Y and Z) of all grid points whose best VR is at least this fraction of VRmax, 0 < value ≤ 1. Larger values give a smaller box; 1.0 keeps only the best point. |
 | CentroidBox | optional rules [Mmin, Mmax, Dx, Dy, Dz]: a box of ±Dx, ±Dy, ±Dz km around the best centroid, moved inside the grid at its edges. This rule overrides CentroidBoxVR for the magnitudes it covers, so set CentroidBox to null to use CentroidBoxVR. |
 
@@ -513,7 +513,9 @@ The user controls the bootstrap through three settings:
 
 - **Iterations:** the number of bootstrap iterations, that is, the number of inversions that are run, each with its own random set of station weights.
 - **Search region:** the bootstrap can be restricted to a subgrid to make it faster, either with the bounding box of the grid points whose VR is at least CentroidBoxVR × VRmax, or with a box of ±Dx, ±Dy, ±Dz km around the best centroid, defined by the user for each magnitude range (CentroidBox, which takes precedence where it applies). If both are null, the bootstrap runs on the whole grid. The box limits only the space: every repetition searches all the time shifts.
-- **Accepted solutions (KeepFraction):** NBEST is derived from the fraction as NBEST = KeepFraction × (number of grid points in the search region × number of time shifts), rounded down and at least 1. With 0, NBEST = 1: only the best solution of each repetition is kept, as in the original, strict Bayesian bootstrap. A positive fraction also keeps near-optimal solutions, which gives a smoother ensemble with wider intervals, as in ISOLA-BaBoo.
+- **Accepted solutions (KeepFraction):** NBEST is derived from the fraction as NBEST = KeepFraction × (number of grid points in the search region × number of time shifts), rounded down and at least 1. With 0, NBEST = 1: only the best solution of each repetition is kept, as in the original, strict Bayesian bootstrap. A positive fraction also keeps the near-optimal solutions of each repetition, to reduce the overconfidence of a single best-fit solution, as in ISOLA-BaBoo (Zahradník et al., 2026). As in that paper, the median solution changes little with the fraction, while the intervals depend on it.
+
+By default, Gisola-BaBoo runs the original Bayesian bootstrap: Iterations = 1000 and KeepFraction = 0, so that each repetition gives its single best solution. To run the ISOLA-BaBoo version, set Iterations = 100 and a positive KeepFraction, for example 0.02.
 
 The result is an ensemble of NBEST × Iterations solutions. From it, Gisola-BaBoo computes the mean moment tensor, with its nodal planes, and the mean values and the 68 % and 95 % confidence intervals of the tensor components, M0, Mw, DC, CLVD, ISO, the centroid position and the centroid time.
 
