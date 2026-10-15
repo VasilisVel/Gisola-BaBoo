@@ -3838,8 +3838,8 @@ def _renderBootstrapPage(plotdir, st, result):
                 + '</div>')
 
     # ---- section 3: Uncertainty Visualization ----
-    # source type (Hudson, trade-off with depth and VR, decomposition / ISO
-    # histograms) followed by magnitudes and the grid VR overview
+    # source type (Hudson, lune, trade-off with depth and VR); the decomposition
+    # and ISO histograms are in the Ensemble Statistics section
     def _cell(f, basis, maxw, h=None):
         im = img(f, ('height:{}px;width:auto;max-width:100%'.format(h) if h
                      else 'width:100%;max-width:{}px;height:auto'.format(maxw)))
@@ -3855,7 +3855,6 @@ def _renderBootstrapPage(plotdir, st, result):
         + _cell('lune_mean.png', 300, 330, 480)
         + _cell('tradeoff_depth_vr.png', 600, 880)
         + _cell('tradeoff_depth_vr_iso.png', 600, 880)      # below it, same size (full MT)
-        + _cell('hist_iso.png', 380, 440)
         + '</div>')
 
     # ---- section 4: Bootstrap Box - source grid, bootstrap subset, best
