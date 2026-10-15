@@ -2511,14 +2511,11 @@ def getBootstrapping(num_iterations=None, num_realizations=None):
     M_comp_stats = OrderedDict((name, _ci_stats(M_all[:, i, j]))
                                for name, i, j in _comp_idx)
 
-    # nodal planes, M0 and Mw of the median moment tensor, not statistics of
+    # nodal planes of the median moment tensor, not statistics of
     # per-member strike/dip/rake
     _med_angl = silsub(np.ascontiguousarray(mt_median[None, :], dtype=np.float64))
     plane1_median = _med_angl[0][0]
     plane2_median = _med_angl[1][0]
-    # M0 / Mw are reported for the median MT (paper, Table 1)
-    M0_medianMT = float(_med_angl[2][0])
-    Mw_medianMT = float(_med_angl[3][0])
 
     # ensemble statistics as in the paper: median, 68% and 95% intervals
     ens_stats = OrderedDict(
@@ -2541,7 +2538,6 @@ def getBootstrapping(num_iterations=None, num_realizations=None):
         plotdir=plotdir, Dobs=Dobs, result=result, VR_all=VR_all,
         mt_mean=mt_mean, mt_median=mt_median,
         SolutionParts=SolutionParts, BestParts=BestParts, Magnitudes=Magnitudes,
-        MagnitudesMedianMT=np.array([M0_medianMT, Mw_medianMT]),
         BestMagnitudes=BestMagnitudes, all_times=all_shifts * Dt, all_coords=all_coords,
         CMT_BEST=CMT_BEST, BootstrapAngles=BootstrapAngles,
         tlim=(tminb * Dt, tmaxb * Dt), xlim=(xminb, xmaxb), ylim=(yminb, ymaxb), zlim=(zminb, zmaxb)
@@ -2557,8 +2553,6 @@ def getBootstrapping(num_iterations=None, num_realizations=None):
             'vr_min': float(VR_all.min()),
             'p1_med': plane1_median,
             'p2_med': plane2_median,
-            'Mo_mt': M0_medianMT,
-            'Mw_mt': Mw_medianMT,
             'full_mt': bool(np.std(ISO_all) > 1e-6 or abs(result.get('BestISO', 0.0)) > 1e-8),
         }
         # (median, p16, p84, p2.5, p97.5) per quantity
@@ -2590,8 +2584,6 @@ def getBootstrapping(num_iterations=None, num_realizations=None):
         'best_idx':           best_idx,
         'plane1_median':      plane1_median,   # planes of the median MT
         'plane2_median':      plane2_median,
-        'M0_medianMT':        M0_medianMT,
-        'Mw_medianMT':        Mw_medianMT,
         'M_median':           M_median,        # 3x3 NED median moment tensor
         'M_comp_stats':       M_comp_stats,    # per-component median/68%/95%
         'ens_stats':          ens_stats,       # median, p16, p84, p2.5, p97.5
@@ -2672,7 +2664,7 @@ def getBootstrapping(num_iterations=None, num_realizations=None):
         _bw('Median moment tensor (component-wise median of the ensemble, NED, N·m):')
         _bw('Mxx = {:.3e}  Myy = {:.3e}  Mzz = {:.3e}'.format(_Mm[0, 0], _Mm[1, 1], _Mm[2, 2]))
         _bw('Mxy = {:.3e}  Mxz = {:.3e}  Myz = {:.3e}'.format(_Mm[0, 1], _Mm[0, 2], _Mm[1, 2]))
-        _bw('M0 = {:.3e} N·m,  Mw = {:.2f}'.format(_s['M0_medianMT'], _s['Mw_medianMT']))
+        _bw()
         _bw('Plane 1: Strike = {:.0f}, Dip = {:.0f}, Rake = {:.0f}'.format(*_pm1))
         _bw('Plane 2: Strike = {:.0f}, Dip = {:.0f}, Rake = {:.0f}'.format(*_pm2))
         _bw()
@@ -2725,12 +2717,11 @@ _FIG_CTX = None
 
 
 def _hist_row(plotdir, data2d, bests, titles, suptitle, fname,
-              xranges=None, col_indices=None, fmts=None, mt_values=None,
+              xranges=None, col_indices=None, fmts=None,
               panel_size=(6, 4)):
     """Histograms with median + 68% + 95% CI lines and the best solution.
     col_indices: which columns of data2d/bests to use (default: all).
-    xranges: per-panel (min, max) or None. mt_values: optional value of
-    the median moment tensor per column, drawn as an extra line."""
+    xranges: per-panel (min, max) or None."""
     if col_indices is None:
         col_indices = list(range(len(titles)))
     n = len(col_indices)
@@ -2744,9 +2735,6 @@ def _hist_row(plotdir, data2d, bests, titles, suptitle, fname,
         ax.hist(data2d[:, data_i], bins=25, color='#5b9bd5',
                 edgecolor='white', linewidth=0.5, alpha=0.85, **kw)
         _ci_lines(ax, data2d[:, data_i], fmts[plot_i] if fmts else '%.2f')
-        if mt_values is not None:
-            ax.axvline(mt_values[data_i], color='purple', linestyle='-.',
-                       linewidth=1.8, label='Median MT')
         ax.axvline(bests[data_i], color='black', linestyle='--',
                    linewidth=1.8, label='Best')
         ax.set_title(titles[plot_i], fontsize=13, fontweight='bold')
@@ -2800,7 +2788,7 @@ def _fig_magnitudes():
     mags = c['Magnitudes']
     _hist_row(c['plotdir'], mags, c['BestMagnitudes'], ['Mo', 'Mw'],
               'Magnitude Distributions (N = %d)' % len(mags), 'hist_magnitudes.png',
-              fmts=['%.2e', '%.2f'], mt_values=c['MagnitudesMedianMT'],
+              fmts=['%.2e', '%.2f'],
               panel_size=(7.5, 5.5))
 
 
@@ -3792,7 +3780,7 @@ def _renderBootstrapPage(plotdir, st, result):
             f=FONT, l=label, v=value)
 
     # ---- section 1: Moment Tensor Statistics (beachball left, stats right) ----
-    # planes, M0 and Mw of the median MT (paper, Table 1)
+    # planes of the median MT; Mw and Mo are the ensemble medians
     p1, p2 = st['p1_med'], st['p2_med']
 
     mt_stats = (
@@ -3800,8 +3788,8 @@ def _renderBootstrapPage(plotdir, st, result):
            '{:.0f} / {:.0f} / {:.0f}'.format(p1[0], p1[1], p1[2]))
         + kv('NP2 strike/dip/rake',
              '{:.0f} / {:.0f} / {:.0f}'.format(p2[0], p2[1], p2[2]))
-        + kv('Mw', '{:.2f}'.format(st['Mw_mt']))
-        + kv('Mo (Nm)', '{:.3e}'.format(st['Mo_mt']))
+        + kv('Mw (ensemble median)', '{:.2f}'.format(st['Mw'][0]))
+        + kv('Mo (ensemble median, Nm)', '{:.3e}'.format(st['Mo'][0]))
         + kv('Ensemble members',
              '{} (from {} resamplings)'.format(st['n_solutions'], st['n_iterations']))
         + kv('VR range (%)', '{:.1f} &ndash; {:.1f}'.format(st['vr_min'], st['vr_max'])))
